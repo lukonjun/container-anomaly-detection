@@ -10,4 +10,4 @@ Check endpoints of a service
 $ kubectl get endpoint
 ### helm hacks
 see the yamls and all the values that were actually deployed?
-$ helm -n <namespace> get all <release-name>  
+$ helm -n namespace get all release-name  
