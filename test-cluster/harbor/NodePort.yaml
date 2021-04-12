@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: chartmuseum-service
+  namespace: harbor
+spec:
+  type: NodePort
+  selector:
+    component: chartmuseum
+  ports:
+    - port: 80
+      targetPort: 80
+      # Optional field
+      # By default and for convenience, the Kubernetes control plane will allocate a port from a range (default: 30000-32767)
+      nodePort: 30080
