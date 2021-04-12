@@ -7,4 +7,4 @@ Make sure to also change the ip from localhost to the public ip of your server i
 One liner to run a debug container
 $ kubectl run -i --tty --rm debug --image=busybox --restart=Never -- sh  
 Check endpoints of a service
-$ Kubectl get endpoint
+$ kubectl get endpoint
