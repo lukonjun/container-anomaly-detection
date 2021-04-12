@@ -4,3 +4,6 @@ $ helm repo add harbor https://helm.goharbor.io
 $ kubectl create namespace harbor
 $ kubens harbor
 $ helm install harbor-release harbor/harbor
+Check out ingress resources
+$ kubectl get ingress -n harbor
+Set local entries in your /etc/host file for notary.harbor.domain and core.harbor.domain to the ip of your master node
