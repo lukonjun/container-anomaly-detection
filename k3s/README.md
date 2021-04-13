@@ -33,7 +33,7 @@ REVISION	UPDATED                 	STATUS         	CHART             	APP VERSION
 $ helm rollback helm-release 1
 Rollback was a success! Happy Helming!
 
- $ helm history helm-release
+$ helm history helm-release
 REVISION	UPDATED                 	STATUS         	CHART             	APP VERSION	DESCRIPTION             
 1       	Mon Nov  9 14:57:36 2020	pending-install	generic-base-0.2.1	0.1.0      	Initial install underway
 2       	Mon Nov  9 15:06:15 2020	deployed       	generic-base-0.2.1	0.1.0      	Rollback to 1  
