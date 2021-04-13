@@ -19,6 +19,10 @@ access the kubernetes api with kubectl
 ```bash
 $ kubectl get --raw /api/v1/nodes | jq
 ```
+quickly run a container
+```bash
+$ kubectl run nginx --image=nginx
+```
 ### helm hacks
 see the yamls and all the values (at the top) that were actually deployed
 ```bash
