@@ -5,20 +5,17 @@ kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/v2.2.0/a
 kubectl create -f ClusterRoleBinding.yml -f ServiceAccount.yml
 ```
 
-Otherwise you get this errors accessing resources over the dashboard
+We need to create a service account with cluster-admin permissions. Otherwise, if we for example log in with the default service account, we get this errors accessing resources over the dashboard, as we do not have the correct permissions.
 ```bash
 configmaps is forbidden: User "system:serviceaccount:kubernetes-dashboard:kubernetes-dashboard" cannot list resource "configmaps" in API group "" in the namespace "default"
 ```
-
-open port to Kubernetes Api on local port
+Open port to Kubernetes Api on local port
 ```bash
 kubectl proxy
 ```
-
-every service account has a generated token, get the token from secret and copy it
+Every service account has a generated token, get the token from secret and copy it
 ```bash
 kubectl describe secret admin-user-token-rtrr7
 ```
-
 Then you can sign in at this URL using your token we got in the previous step:
 http://localhost:8001/api/v1/namespaces/kubernetes-dashboard/services/https:kubernetes-dashboard:/proxy/
