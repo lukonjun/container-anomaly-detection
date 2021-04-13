@@ -24,7 +24,7 @@ see the yamls and all the values (at the top) that were actually deployed
 ```bash
 $ helm -n namespace get all release-name  
 ```
-if your helm release is in a pending state (stuck), oftend cause by canceling a helm release with ctrl + c, rolling back to an earlier release could fix this
+if your helm release is in a pending state (stuck), often caused by canceling a helm release with ctrl + c, rolling back to an earlier release could fix this
 ```bash
 $ helm history helm-release
 REVISION	UPDATED                 	STATUS         	CHART             	APP VERSION	DESCRIPTION             
