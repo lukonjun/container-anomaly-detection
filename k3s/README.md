@@ -1,4 +1,5 @@
 # Cluster Set Up
+### Installation
 Documentation from: https://rancher.com/docs/k3s/latest/en/quick-start/  
 ```bash
 $ curl -sfL https://get.k3s.io | sh -
