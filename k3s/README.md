@@ -15,6 +15,10 @@ displays the endpoints of a service, if no endpoint is listed your label do not 
 ```bash
 $ kubectl get endpoint
 ```
+access the kubernetes api with kubectl
+```bash
+$ kubectl get --raw /api/v1/nodes | jq
+```
 ### helm hacks
 see the yamls and all the values (at the top) that were actually deployed
 ```bash
