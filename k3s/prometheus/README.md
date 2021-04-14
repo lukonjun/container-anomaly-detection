@@ -11,5 +11,5 @@ $ kubectl port-forward deployment/prometheus-grafana 3000
 ```
 We can also access the prometheus ui
 ```bash
-kubectl port-forward prometheus-prometheus-kube-prometheus-prometheus-0 9090
+$ kubectl port-forward prometheus-prometheus-kube-prometheus-prometheus-0 9090
 ```
