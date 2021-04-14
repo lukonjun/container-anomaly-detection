@@ -35,7 +35,7 @@ $ dnf install wget -y
 $ wget https://github.com/goharbor/harbor/releases/download/v2.2.1/harbor-online-installer-v2.2.1.tgz
 $ tar xvf harbor-online-installer-v2.2.1.tgz
 ```
-Fill out the neccessary configuration values in harbor.yml.tmpl. 
+Fill out the neccessary configuration values in harbor.yml.tmpl  
 *hostname: container-registry.lukonjun.de  
 certificate: /etc/letsencrypt/live/container-registry.lukonjun.de/fullchain.pem  
 private_key: /etc/letsencrypt/live/container-registry.lukonjun.de/privkey.pem  
@@ -58,7 +58,7 @@ Username: admin
 Password:
 Login Succeeded
 ```
-then try to push an image to harbor from you local machine
+then try to push an image
 ```bash
 docker pull nginx
 docker tag nginx:latest container-registry.lukonjun.de/library/nginx:latest
