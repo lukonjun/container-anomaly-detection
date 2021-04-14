@@ -18,7 +18,7 @@ $ dnf install epel-release -y
 $ dnf install certbot -y
 $ certbot certonly -d container-registry.lukonjun.de
 ```
-Certs and private key are located under 
+Certs and private key are located under  
 */etc/letsencrypt/live/container-registry.lukonjun.de/fullchain.pem*  
 */etc/letsencrypt/live/container-registry.lukonjun.de/privkey.pem*  
 Set up a Cron Job to automatically renew the cert  
