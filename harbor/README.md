@@ -1,5 +1,5 @@
 # Harbor Installation
-Prerequiste is a Server with 4GB Ram and 2 CPUs, docker and docker-compose. Im installing this on a Centos 8 Server
+Prerequiste is a Server with 4GB Ram and 2 CPUs + docker and docker-compose installed. Running this on a Centos 8 VM.
 Official Documentation can be found here https://goharbor.io/docs/1.10/install-config/  
 Install docker with the docker install script from rancher
 ```bash
