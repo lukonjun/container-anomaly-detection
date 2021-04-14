@@ -57,6 +57,10 @@ quickly run a container
 ```bash
 $ kubectl run nginx --image=nginx
 ```
+if manual deletion is to exhausting
+```bash
+$ for i in `kubectl get clusterrolebinding | awk '/46h/ {print $1}'`; do echo k delete clusterrolebindings $i; done
+```
 ### helm hacks
 see the yamls and all the values (at the top) that were actually deployed
 ```bash
