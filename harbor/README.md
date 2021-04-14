@@ -29,7 +29,7 @@ To manually renew your certificates run
 ```bash
 $ certbot renew
 ```
-Download the Harbor
+Download the Harbor Installer Script
 ```bash
 $ dnf install wget -y
 $ wget https://github.com/goharbor/harbor/releases/download/v2.2.1/harbor-online-installer-v2.2.1.tgz
