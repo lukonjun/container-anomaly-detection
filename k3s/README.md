@@ -1,7 +1,7 @@
 # Cluster Set Up
 ### Installation
-Documentation from: https://rancher.com/docs/k3s/latest/en/installation/ha/
-First Create an External Datastore, and also add a user
+Offical Documentation here: https://rancher.com/docs/k3s/latest/en/installation/ha/  
+First Create an External Datastore and also add a user
 ```bash
 $ apt update
 $ apt install mysql-server
@@ -65,6 +65,15 @@ $ for i in `kubectl get clusterrolebinding | awk '/46h/ {print $1}'`; do echo k 
 see the yamls and all the values (at the top) that were actually deployed
 ```bash
 $ helm -n namespace get all release-name  
+```
+download a chart from a repository and unpack it in local directory
+```bash
+$ helm pull --untar bitnami/nginx 
+```
+search for a specific chart in all added repositories, leave out the search name to list all charts
+```bash
+$ helm search repo nginx
+$ helm search repo
 ```
 if your helm release is in a pending state (stuck), often caused by canceling a helm release with ctrl + c, rolling back to an earlier release could fix this
 ```bash
