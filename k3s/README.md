@@ -1,7 +1,7 @@
 # Cluster Set Up
 ### Installation
-Documentation from: https://rancher.com/docs/k3s/latest/en/installation/ha/
-First Create an External Datastore, and also add a user
+Offical Documentation here: https://rancher.com/docs/k3s/latest/en/installation/ha/  
+First Create an External Datastore and also add a user
 ```bash
 $ apt update
 $ apt install mysql-server
