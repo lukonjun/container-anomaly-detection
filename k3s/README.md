@@ -45,6 +45,10 @@ One liner to run a debug container, busybox only includes no curl, only wget
 ```bash
 $ kubectl run -i --tty --rm debug --image=busybox --restart=Never -- sh  
 ```
+Enter a pod over command line
+```bash
+$ kubectl exec -it test-pod /bin/sh
+```
 displays the endpoints of a service, if no endpoint is listed your label do not apply to any pod
 ```bash
 $ kubectl get endpoint
