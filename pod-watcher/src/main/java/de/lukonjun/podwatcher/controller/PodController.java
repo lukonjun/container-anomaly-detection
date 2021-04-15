@@ -38,11 +38,21 @@ public class PodController {
     // Example from https://github.com/kubernetes-client/java/blob/master/examples/examples-release-12/src/main/java/io/kubernetes/client/examples/KubeConfigFileClientExample.java
     @Scheduled(fixedRateString = "${pod.controller.scheduling.rate}")
     private void watchPodsSpawn() throws IOException, ApiException {
+        // Out of Cluster Client, loading Kube Config File
+        /*
         // file path to your KubeConfig
         String kubeConfigPath = System.getenv("HOME") + "/.kube/config";
+
         // loading the out-of-cluster config, a kubeconfig from file-system
         ApiClient client =
                 ClientBuilder.kubeconfig(KubeConfig.loadKubeConfig(new FileReader(kubeConfigPath))).build();
+        */
+        // loading the in-cluster config, including:
+        //   1. service-account CA
+        //   2. service-account bearer-token
+        //   3. service-account namespace
+        //   4. master endpoints(ip, port) from pre-set environment variables
+        ApiClient client = ClientBuilder.cluster().build();
 
         // set the global default api-client to the in-cluster one from above
         Configuration.setDefaultApiClient(client);
