@@ -65,6 +65,15 @@ if manual deletion is to exhausting
 ```bash
 $ for i in `kubectl get clusterrolebinding | awk '/46h/ {print $1}'`; do echo k delete clusterrolebindings $i; done
 ```
+create a clusterrolebinding with existing service account and clusterrole
+```bash
+kubectl create clusterrolebinding pod-reader --clusterrole=pod-reader --serviceaccount=namespace:sa-name
+```
+debug what permissions a service account actually has
+```bash
+kubectl auth can-i <verb> <resources> --as=system:serviceaccount:<namespace>:<service account name>
+kubectl auth can-i get pods --as=system:serviceaccount:playground:pod-watcher-release-chart-pod-watcher
+```
 ### helm hacks
 see the yamls and all the values (at the top) that were actually deployed
 ```bash
