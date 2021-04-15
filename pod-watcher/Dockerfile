@@ -1,4 +1,4 @@
-FROM openjdk:14-jdk-alpine
+FROM openjdk:15-jdk-alpine
 RUN apk --no-cache add curl
 COPY target/application.jar /opt/
 # Create a group and user
