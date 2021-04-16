@@ -32,12 +32,12 @@ jobs:
       with:
         java-version: 1.14
     - name: Build with Maven
-      working-directory: ./pod-watcher
+      working-directory: ./metrics-collector
       run: mvn -B package --file pom.xml
     - name: GITHUB_SHA
       run: echo ${GITHUB_SHA}
     - name: Run docker build
-      working-directory: ./pod-watcher
+      working-directory: ./metrics-collector
       run: docker build --tag ${{ env.registry }}/${{ env.image_name }}:$GITHUB_SHA .
     - name: Login to ${{ env.registry }} Docker Registry
       uses: docker/login-action@v1
