@@ -45,6 +45,10 @@ One liner to run a debug container, busybox only includes no curl, only wget
 ```bash
 $ kubectl run -i --tty --rm debug --image=busybox --restart=Never -- sh  
 ```
+Enter a pod over command line
+```bash
+$ kubectl exec -it test-pod /bin/sh
+```
 displays the endpoints of a service, if no endpoint is listed your label do not apply to any pod
 ```bash
 $ kubectl get endpoint
@@ -60,6 +64,15 @@ $ kubectl run nginx --image=nginx
 if manual deletion is to exhausting
 ```bash
 $ for i in `kubectl get clusterrolebinding | awk '/46h/ {print $1}'`; do echo k delete clusterrolebindings $i; done
+```
+create a clusterrolebinding with existing service account and clusterrole
+```bash
+kubectl create clusterrolebinding pod-reader --clusterrole=pod-reader --serviceaccount=namespace:sa-name
+```
+debug what permissions a service account actually has
+```bash
+kubectl auth can-i <verb> <resources> --as=system:serviceaccount:<namespace>:<service account name>
+kubectl auth can-i get pods --as=system:serviceaccount:playground:pod-watcher-release-chart-pod-watcher
 ```
 ### helm hacks
 see the yamls and all the values (at the top) that were actually deployed
