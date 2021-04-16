@@ -5,10 +5,10 @@
 replicaCount: 1
 
 image:
-  repository: container-registry.lukonjun.de/library/pod-watcher
+  repository: container-registry.lukonjun.de/library/metrics-collector
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
-  tag: "2b71578203f3ae5316ed0d0c2c4b1a2368ca6aac"
+  tag: "7b246ae3634ca34ec991666cfb682493b9da3e7d"
 
 imagePullSecrets: []
 nameOverride: ""

@@ -1,0 +1,11 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  # "namespace" omitted since ClusterRoles are not namespaced
+  name: pod-reader
+rules:
+  - apiGroups: [""]
+    #
+    # at the HTTP level, the name of the resource for accessing pods
+    resources: ["pods"]
+    verbs: ["get", "watch", "list"]
