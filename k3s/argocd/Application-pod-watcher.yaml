@@ -1,13 +1,18 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: metrics-collector 
+  name: pod-watcher
   namespace: argocd
 spec:
   project: default
   source:
+    path: pod-watcher-helm
     repoURL: https://github.com/lukonjun/container-anomaly-detection.git
-    chart: metrics-collector-helm
+    targetRevision: HEAD
   destination:
     server: https://kubernetes.default.svc
-    namespace: playground
+    namespace: anomaly-detection-stack 
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
