@@ -40,6 +40,10 @@ Adding a Worker Node involves getting a Node token from one of the master nodes 
 ```bash
 curl -sfL https://get.k3s.io | K3S_URL=https://load_balancer_ip_or_hostname:6443 K3S_TOKEN=mynodetoken sh -
 ```
+You can start and stop the servcie with systemctl
+```bash
+systemctl status k3s-agent.service
+```
 ### kubectl Hacks
 One liner to run a debug container, busybox only includes no curl, only wget
 ```bash
