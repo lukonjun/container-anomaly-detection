@@ -38,7 +38,7 @@ jobs:
       run: echo ${GITHUB_SHA}
     - name: Run docker build
       working-directory: ./pod-watcher
-      run: docker build --tag ${{ env.registry }}/${{ env.image_name }}:$GITHUB_SHA .
+      run: docker build --tag ${{ env.registry }}/${{ env.image_name }}:latest .
     - name: Login to ${{ env.registry }} Docker Registry
       uses: docker/login-action@v1
       with:
