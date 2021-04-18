@@ -1,0 +1,13 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: metrics-collector 
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/lukonjun/container-anomaly-detection.git
+    chart: metrics-collector-helm
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: playground
