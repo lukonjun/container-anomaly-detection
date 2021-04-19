@@ -24,6 +24,9 @@ jobs:
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
     - uses: actions/checkout@v2
+    - name: test
+      working-directory: ./metrics-collector-helm
+      run: ls -lah
     - name: yq - portable yaml processor
       uses: mikefarah/yq@v4.7.0
       with:
