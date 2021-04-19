@@ -24,21 +24,16 @@ jobs:
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
     - uses: actions/checkout@v2
-    - name: test
-      working-directory: ./metrics-collector-helm
-      run: ls -lah
     - name: yq - portable yaml processor
       uses: mikefarah/yq@v4.7.0
       with:
       # The Command which should be run
-        working-directory: ./metrics-collector-helm
-        cmd: yq eval '.image.tag = "$GITHUB_SHA"' values.yaml
+        cmd: yq eval '.image.tag = "$GITHUB_SHA"' metrics-collector-helm/values.yaml
     - name: Add & Commit
       uses: EndBug/add-and-commit@v7.1.2
       with:
         # Arguments for the git add command
-        working-directory: ./metrics-collector-helm
-        add: values.yaml
+        add: metrics-collector-helm/values.yaml
         # The message for the commit
         message: upate image tag in metrics-collector-helm/values.yaml to $GITHUB_SHA
       
