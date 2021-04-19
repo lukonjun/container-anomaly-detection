@@ -19,29 +19,6 @@ on:
     
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  change-image-tag:
-    runs-on: ubuntu-latest
-    # Steps represent a sequence of tasks that will be executed as part of the job
-    steps:
-    - uses: actions/checkout@v2
-    - name: test run
-      run: echo $GITHUB_SHA
-    - name: add new env variable
-      run: echo "hash=$GITHUB_SHA" >> $GITHUB_ENV
-    - name: yq - portable yaml processor
-      uses: mikefarah/yq@v4.7.0
-      with:
-      # The Command which should be run
-        cmd: yq -i eval '.image.tag = "${{ env.hash }}"' metrics-collector-helm/values.yaml
-    - name: Add & Commit
-      uses: EndBug/add-and-commit@v7.1.2
-      with:
-        # Arguments for the git add command
-        add: metrics-collector-helm/values.yaml
-        # The message for the commit
-        message: upate image tag in metrics-collector-helm/values.yaml to ${{ env.hash }}
-    - name: Push
-      run: git push
       
   # This workflow contains a single 
   build-and-push-image:
@@ -73,3 +50,24 @@ jobs:
       run: docker push ${{ env.registry }}/${{ env.image_name }}:$GITHUB_SHA
     - name: Name of Image 
       run: echo "${{ env.registry }}/${{ env.image_name }}:$GITHUB_SHA"
+  
+  change-image-tag:
+    needs: build-and-push-image
+    runs-on: ubuntu-latest
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+    - uses: actions/checkout@v2
+    - name: add new env variable
+      run: echo "hash=$GITHUB_SHA" >> $GITHUB_ENV
+    - name: yq - portable yaml processor
+      uses: mikefarah/yq@v4.7.0
+      with:
+      # The Command which should be run
+        cmd: yq -i eval '.image.tag = "${{ env.hash }}"' metrics-collector-helm/values.yaml
+    - name: Add & Commit
+      uses: EndBug/add-and-commit@v7.1.2
+      with:
+        # Arguments for the git add command
+        add: metrics-collector-helm/values.yaml
+        # The message for the commit
+        message: upate image tag in metrics-collector-helm/values.yaml to ${{ env.hash }}
