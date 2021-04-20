@@ -124,7 +124,7 @@ public class MetricsCollectorApplication {
 			content = EntityUtils.toString(entity, "UTF-8");
 
 		}catch (Exception e) {
-			logger.error(e.getStackTrace().toString());
+			e.printStackTrace(System.out);
 		}
 		finally {
 
