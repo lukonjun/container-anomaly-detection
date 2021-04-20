@@ -33,7 +33,7 @@ public class CadvisorController {
 
     @Scheduled(fixedRateString = "5000")
     public void getCadvisorMetrics() throws ApiException, IOException {
-
+/*
         // file path to your KubeConfig
         String kubeConfigPath = System.getenv("HOME") + "/.kube/config";
 
@@ -46,8 +46,7 @@ public class CadvisorController {
 
         // the CoreV1Api loads default api-client from global configuration.
         CoreV1Api api = new CoreV1Api();
-
-/*
+*/
 		// loading the in-cluster config, including:
 		//   1. service-account CA
 		//   2. service-account bearer-token
@@ -63,7 +62,7 @@ public class CadvisorController {
 
 		// the CoreV1Api loads default api-client from global configuration.
 		CoreV1Api api = new CoreV1Api();
-*/
+
         List<String> nodeNameList = new ArrayList<>();
         V1NodeList list = api.listNode(null, null, null, null,null,null, null, null, null, null);
         for (V1Node item : list.getItems()) {
