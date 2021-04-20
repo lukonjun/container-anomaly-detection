@@ -7,7 +7,7 @@ image:
   repository: container-registry.lukonjun.de/library/metrics-collector
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
-  tag: "e32c2e53a1e72d938246c3a60c57d8aa7e32e223"
+  tag: "d4f2f094ae9a805b200df47b2935dec9b24f8a28"
 imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""
