@@ -124,7 +124,7 @@ public class MetricsCollectorApplication {
 			content = EntityUtils.toString(entity, "UTF-8");
 
 		}catch (Exception e) {
-			logger.error("Catch an Exception, most likely url miss spelling");
+			logger.error(e.getStackTrace().toString());
 		}
 		finally {
 
