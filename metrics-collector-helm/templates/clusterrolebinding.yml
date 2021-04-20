@@ -10,3 +10,4 @@ roleRef:
 subjects:
   - kind: ServiceAccount
     name: {{ include "chart-pod-watcher.fullname" . }}
+    namespace: anomaly-detection-stack
