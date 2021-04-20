@@ -78,6 +78,10 @@ debug what permissions a service account actually has
 kubectl auth can-i <verb> <resources> --as=system:serviceaccount:<namespace>:<service account name>
 kubectl auth can-i get pods --as=system:serviceaccount:playground:pod-watcher-release-chart-pod-watcher
 ```
+pass kubeconfig file via command line
+```bash
+kubectl --kubeconfig ./admin.conf get nodes
+```
 ### helm hacks
 see the yamls and all the values (at the top) that were actually deployed
 ```bash
