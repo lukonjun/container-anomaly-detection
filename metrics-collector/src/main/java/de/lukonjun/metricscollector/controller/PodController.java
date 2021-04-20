@@ -19,6 +19,7 @@ import io.kubernetes.client.util.KubeConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Controller;
@@ -36,11 +37,15 @@ public class PodController {
 
     Logger logger = LoggerFactory.getLogger(PodController.class);
 
+    @Value("${test}")
+    private String language;
+
     @Autowired
     PodRepository podRepository;
 
     @Scheduled(fixedRateString = "${pod.controller.metrics.collection.rate}")
-    private void metricsCollectionWriteToDatabase() throws IOException, ApiException {
+    public void metricsCollectionWriteToDatabase() throws IOException, ApiException {
+        System.out.print(language);
         List<ModelPodMetrics> modelPodMetricsList = collectMetricsFromAllPods();
         if(writeMetricsToDatabase(modelPodMetricsList)){
             logger.info("Successfully wrote " + modelPodMetricsList.size() + " to database");
