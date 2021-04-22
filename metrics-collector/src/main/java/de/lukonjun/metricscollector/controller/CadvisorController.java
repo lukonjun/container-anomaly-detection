@@ -3,6 +3,7 @@ package de.lukonjun.metricscollector.controller;
 import de.lukonjun.metricscollector.MetricsCollectorApplication;
 import io.kubernetes.client.openapi.ApiClient;
 import io.kubernetes.client.openapi.ApiException;
+import io.kubernetes.client.openapi.ApiResponse;
 import io.kubernetes.client.openapi.Configuration;
 import io.kubernetes.client.openapi.apis.CoreV1Api;
 import io.kubernetes.client.openapi.models.V1Node;
@@ -31,9 +32,9 @@ public class CadvisorController {
     @Value("${kubernetes.api.endpoint:http://kubernetes.default.svc}")
     private String apiString;
 
-    @Scheduled(fixedRateString = "5000")
+    //@Scheduled(fixedRateString = "5000")
     public void getCadvisorMetrics() throws ApiException, IOException {
-/*
+
         // file path to your KubeConfig
         String kubeConfigPath = System.getenv("HOME") + "/.kube/config";
 
@@ -46,7 +47,8 @@ public class CadvisorController {
 
         // the CoreV1Api loads default api-client from global configuration.
         CoreV1Api api = new CoreV1Api();
-*/
+
+        /*
 		// loading the in-cluster config, including:
 		//   1. service-account CA
 		//   2. service-account bearer-token
@@ -62,6 +64,12 @@ public class CadvisorController {
 
 		// the CoreV1Api loads default api-client from global configuration.
 		CoreV1Api api = new CoreV1Api();
+        */
+
+        String[] array = new String[1];
+        array[0]="default";
+        ApiResponse<Object> result = client.execute(client.buildCall("/api/v1/nodes/worker01/proxy/metrics/cadvisor ", "GET", null, null, null, null, null, null, null, null));
+
 
         List<String> nodeNameList = new ArrayList<>();
         V1NodeList list = api.listNode(null, null, null, null,null,null, null, null, null, null);
