@@ -26,6 +26,10 @@ stream {
   }
 }
 ```
+Install on every Node Docker as a Container Runtime, telegraf is not able to fetch data from containerd
+```bash
+curl https://releases.rancher.com/install-docker/19.03.sh | sh
+```
 Adding a Master Node
 ```bash
 $ K3S_DATASTORE_ENDPOINT='mysql://username:password@tcp(database_ip_or_hostname:port)/database'
