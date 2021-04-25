@@ -18,5 +18,5 @@ imageSizeBytes   |  /api/v1/nodes/ (API)  | 326597
 image   | ? | ?
 rx_bytes (receive)   | kubernetes_pod_network | 1.774.377
 tx_bytes (transmit)   | kubernetes_pod_network | 953.169
-io_service_recursive_read   | docker_container_blkio | /api/v1/nodes/worker01/proxy/metrics/probes
+io_service_recursive_read   | docker_container_blkio | 8192
 io_service_recursive_write   | docker_container_blkio | 0
