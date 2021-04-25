@@ -50,7 +50,7 @@ systemctl status k3s-agent.service
 ```
 To unistall k3s you can either use 
 ```bash
-/usr/local/bin/k3s-uninstall.sh (or as k3s-agent-uninstall.sh
+/usr/local/bin/k3s-uninstall.sh (or as k3s-agent-uninstall.sh)
 ```
 ### kubectl Hacks
 One liner to run a debug container, busybox only includes no curl, only wget
