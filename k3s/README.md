@@ -36,7 +36,7 @@ $ K3S_DATASTORE_ENDPOINT='mysql://username:password@tcp(database_ip_or_hostname:
 $ curl -sfL https://get.k3s.io | sh -s - server --node-taint CriticalAddonsOnly=true:NoExecute --tls-san load_balancer_ip_or_hostname --docker
 ```
 Get the kubeconfig file from /etc/rancher/k3s/k3s.yaml and copy it to your local kubeconfig    
-Make sure to also change the ip from localhost to the ip of your load balancer. Afterwards run, to get running nodes
+Make sure to also change the *ip from localhost to the ip of your load balancer*. Afterwards run, to get running nodes
 ```bash
 $ kubectl get no
 ```
