@@ -33,7 +33,7 @@ curl https://releases.rancher.com/install-docker/19.03.sh | sh
 Adding a Master Node
 ```bash
 $ K3S_DATASTORE_ENDPOINT='mysql://username:password@tcp(database_ip_or_hostname:port)/database'
-$ curl -sfL https://get.k3s.io | sh -s - server --node-taint CriticalAddonsOnly=true:NoExecute --tls-san load_balancer_ip_or_hostname
+$ curl -sfL https://get.k3s.io | sh -s - server --node-taint CriticalAddonsOnly=true:NoExecute --tls-san load_balancer_ip_or_hostname --docker
 ```
 Get the kubeconfig file from /etc/rancher/k3s/k3s.yaml and copy it to your local kubeconfig    
 Make sure to also change the ip from localhost to the ip of your load balancer. Afterwards run, to get running nodes
@@ -42,11 +42,15 @@ $ kubectl get no
 ```
 Adding a Worker Node involves getting a Node token from one of the master nodes to join the cluster. This file is located under */var/lib/rancher/k3s/server/node-token*
 ```bash
-curl -sfL https://get.k3s.io | K3S_URL=https://load_balancer_ip_or_hostname:6443 K3S_TOKEN=mynodetoken sh -
+curl -sfL https://get.k3s.io | K3S_URL=https://load_balancer_ip_or_hostname:6443 K3S_TOKEN=mynodetoken sh -s - --docker
 ```
 You can start and stop the servcie with systemctl
 ```bash
 systemctl status k3s-agent.service
+```
+To unistall k3s you can either use 
+```bash
+/usr/local/bin/k3s-uninstall.sh (or as k3s-agent-uninstall.sh
 ```
 ### kubectl Hacks
 One liner to run a debug container, busybox only includes no curl, only wget
