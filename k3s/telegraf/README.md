@@ -2,7 +2,7 @@ add the helm repo
 ```bash
 helm repo add influxdata https://helm.influxdata.com/  
 helm pull --untar influxdata/telegraf-ds  
-```bash
+```
 Set Up a new User in the influxdb database, Public Ip of our InfluxDB is 116.203.124.188
 ```bash
 root@influxdb:~# influx -username <username>  -password '<mypassword>'
