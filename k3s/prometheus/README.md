@@ -3,6 +3,7 @@ I followed the installtion steps on https://artifacthub.io/packages/helm/prometh
 ```bash
 $ helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
 $ helm repo update
+$ kubectl create namespace prometheus
 $ helm install prometheus prometheus-community/kube-prometheus-stack -n prometheus
 ```
 This takes some time, afterwards try to connect via portforwarding to grafana, the default credentials are admin/prom-operator
