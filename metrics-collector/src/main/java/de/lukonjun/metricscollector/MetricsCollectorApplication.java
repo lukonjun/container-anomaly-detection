@@ -11,7 +11,7 @@ public class MetricsCollectorApplication {
 
 	Logger logger = LoggerFactory.getLogger(MetricsCollectorApplication.class);
 
-	public static void main(String[] args) throws IOException, ApiException {
+	public static void main(String[] args) throws IOException, ApiException, InterruptedException {
 		SpringApplication.run(MetricsCollectorApplication.class, args);
 	}
 }

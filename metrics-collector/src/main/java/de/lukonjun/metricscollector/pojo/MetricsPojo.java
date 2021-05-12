@@ -1,4 +1,4 @@
-package de.lukonjun.metricscollector.Pojo;
+package de.lukonjun.metricscollector.pojo;
 
 
 public class MetricsPojo {
@@ -72,4 +72,10 @@ public class MetricsPojo {
     public String getImage() {
         return image;
     }
+
+    @Override
+    public String toString() {
+        return getPodName() + " " + getContainerName() + " " + getNamespace() + " " + getMemoryBytes() + " " + getCpu() + " " + getImageSizeBytes() + " " + getImage();
+    }
+
 }

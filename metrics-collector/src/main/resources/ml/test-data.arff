@@ -1,0 +1,28 @@
+@relation pod_metrics
+
+@attribute pod_name string
+@attribute namespace {kube-system,telegraf-ds}
+@attribute memory_usage_bytes numeric
+@attribute cpu_usage_nanocores numeric
+
+@data
+coredns-854c77959c-pw26q kube-system 1.2550144E7 5473383.0
+svclb-traefik-8k247 kube-system 831488.0 0.0
+svclb-traefik-x7wxx kube-system 991232.0 0.0
+svclb-traefik-8k247 kube-system 835584.0 0.0
+svclb-traefik-x7wxx kube-system 978944.0 0.0
+svclb-traefik-xgpsg kube-system 856064.0 0.0
+svclb-traefik-xgpsg kube-system 892928.0 0.0
+local-path-provisioner-5ff76fc89d-tsdmv kube-system 7163904.0 1833742.0
+metrics-server-86cbb8457f-x5gjp kube-system 1.0248192E7 1450664.0
+telegraf-ds-7mt74 telegraf-ds 2932736.0 0.0
+coredns-854c77959c-pw26q kube-system 1.2550144E7 5473383.0
+svclb-traefik-8k247 kube-system 831488.0 0.0
+svclb-traefik-xgpsg kube-system 856064.0 0.0
+svclb-traefik-x7wxx kube-system 991232.0 0.0
+svclb-traefik-8k247 kube-system 835584.0 0.0
+svclb-traefik-x7wxx kube-system 978944.0 0.0
+svclb-traefik-xgpsg kube-system 892928.0 0.0
+local-path-provisioner-5ff76fc89d-tsdmv kube-system 7163904.0 1833742.0
+metrics-server-86cbb8457f-x5gjp kube-system 1.0248192E7 1450664.0
+telegraf-ds-7mt74 telegraf-ds 2932736.0 0.0

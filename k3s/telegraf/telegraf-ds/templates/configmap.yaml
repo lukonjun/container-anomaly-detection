@@ -36,7 +36,8 @@ data:
 
     [[inputs.docker]]
     endpoint = "unix:///var/run/docker.sock"
-
+    total = true
+    total_include = ["cpu", "blkio", "network"]
     [[inputs.kubernetes]]
     url = "https://$HOSTIP:10250"
     bearer_token = "/run/secrets/kubernetes.io/serviceaccount/token"

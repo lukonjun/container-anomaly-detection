@@ -91,8 +91,6 @@ public class CadvisorController {
 
     }
 
-
-
     // http://zetcode.com/java/readwebpage/
     private String urlReader(String sourceUrl) throws IOException {
 

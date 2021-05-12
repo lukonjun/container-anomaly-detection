@@ -1,15 +1,21 @@
 package de.lukonjun.metricscollector.influxdb;
 
-import de.lukonjun.metricscollector.Pojo.MetricsPojo;
+import de.lukonjun.metricscollector.model.DockerContainerBlkio;
+import de.lukonjun.metricscollector.model.KubernetesPodContainer;
+import de.lukonjun.metricscollector.model.KubernetesPodNetwork;
+import de.lukonjun.metricscollector.model.KubernetesPodVolume;
+import de.lukonjun.metricscollector.pojo.MetricsPojo;
 import de.lukonjun.metricscollector.controller.PodController;
 import io.kubernetes.client.openapi.ApiException;
 import org.influxdb.InfluxDB;
 import org.influxdb.InfluxDBFactory;
 import org.influxdb.dto.*;
+import org.influxdb.impl.InfluxDBResultMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.PropertySource;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -18,6 +24,7 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 @Component
+@PropertySource("classpath:application.properties")
 public class InfluxController {
 
     Logger logger = LoggerFactory.getLogger(PodController.class);
@@ -31,6 +38,25 @@ public class InfluxController {
     @Value("${influxdb.password}")
     private String password;
 
+    @Value("${influxdb.database}")
+    private String database;
+
+    private InfluxDB connection;
+
+    public InfluxDB getConnection() {
+        return connection;
+    }
+
+    public void setConnection(InfluxDB connection) {
+        this.connection = connection;
+    }
+
+    // https://www.baeldung.com/spring-value-annotation
+    public InfluxController(@Value("${influxdb.server.url:default}") String serverUrl, @Value("${influxdb.username:default}") String userName, @Value("${influxdb.password:default}") String password,  @Value("${influxdb.database:default}") String database){
+        this.connection = InfluxDBFactory.connect(serverUrl, userName, password);
+        this.connection.setDatabase(database);
+    }
+
     @Autowired
     PodController podController;
     /*
@@ -40,8 +66,8 @@ public class InfluxController {
         Documentation
         https://devconnected.com/the-definitive-guide-to-influxdb-in-2019/ (Full Guide)
      */
-    @Scheduled(fixedRateString = "${influxdb.metrics.collection.rate:10000}")
-    public void connectToDatabase() throws InterruptedException, IOException, ApiException {
+    //@Scheduled(fixedRateString = "${influxdb.metrics.collection.rate:10000}")
+    public void getMetricsFromInflux() throws InterruptedException, IOException, ApiException {
 
         InfluxDB influxDB = InfluxDBFactory.connect(serverUrl, userName, password);
 
@@ -56,6 +82,10 @@ public class InfluxController {
 
         List<MetricsPojo> metricsPojoList = podController.collectPodMetrics();
 
+        boolean printOutMetrics = true;
+        if(printOutMetrics) {
+            metricsPojoList.forEach(mp -> System.out.println(mp));
+        }
         BatchPoints batchPoints = BatchPoints
                 .database(databaseName)
                 .retentionPolicy(retentionPolicyName)
@@ -79,5 +109,74 @@ public class InfluxController {
 
         influxDB.close();
     }
+
+    //@Scheduled(fixedRateString = "${influxdb.metrics.collection.rate:10000}")
+    public void connectToDatabase2() throws InterruptedException, IOException, ApiException {
+
+        InfluxDB connection = InfluxDBFactory.connect(serverUrl, userName, password);
+        String databaseName = "k3s_telegraf_ds";
+        String retentionPolicyName = "retention_pod_metrics";
+        connection.setDatabase(databaseName);
+        connection.setRetentionPolicy(retentionPolicyName);
+
+        // Telegraf Data gets fetched every 10 Seconds
+        // Could also check Results of last 5 Minutes, idk
+        // What Time Interval do we check?
+        QueryResult queryResult = connection
+                .query(new Query("Select * from kubernetes_pod_container LIMIT 10"));
+
+        InfluxDBResultMapper resultMapper = new InfluxDBResultMapper();
+        List<KubernetesPodContainer> memoryPointList = resultMapper
+                .toPOJO(queryResult, KubernetesPodContainer.class);
+
+        memoryPointList.forEach(mp -> System.out.println(mp));
+
+        connection.close();
+    }
+
+    public List<KubernetesPodContainer> selectFromKubernetesPodContainer(String query){
+        QueryResult queryResult = connection
+                .query(new Query(query));
+
+        InfluxDBResultMapper resultMapper = new InfluxDBResultMapper();
+        List<KubernetesPodContainer> memoryPointList = resultMapper
+                .toPOJO(queryResult, KubernetesPodContainer.class);
+
+        return memoryPointList;
+    }
+
+    public List<KubernetesPodNetwork> selectFromKubernetesPodNetwork(String query){
+        QueryResult queryResult = connection
+                .query(new Query(query));
+
+        InfluxDBResultMapper resultMapper = new InfluxDBResultMapper();
+        List<KubernetesPodNetwork> memoryPointList = resultMapper
+                .toPOJO(queryResult, KubernetesPodNetwork.class);
+
+        return memoryPointList;
+    }
+
+    public List<KubernetesPodVolume> selectFromKubernetesPodNVolume(String query){
+        QueryResult queryResult = connection
+                .query(new Query(query));
+
+        InfluxDBResultMapper resultMapper = new InfluxDBResultMapper();
+        List<KubernetesPodVolume> memoryPointList = resultMapper
+                .toPOJO(queryResult, KubernetesPodVolume.class);
+
+        return memoryPointList;
+    }
+
+    public List<DockerContainerBlkio> selectDockerContainerBlkio(String query){
+        QueryResult queryResult = connection
+                .query(new Query(query));
+
+        InfluxDBResultMapper resultMapper = new InfluxDBResultMapper();
+        List<DockerContainerBlkio> memoryPointList = resultMapper
+                .toPOJO(queryResult, DockerContainerBlkio.class);
+
+        return memoryPointList;
+    }
+
 
 }

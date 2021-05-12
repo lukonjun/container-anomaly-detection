@@ -1,6 +1,6 @@
-package de.lukonjun.metricscollector.Pojo;
+package de.lukonjun.metricscollector.pojo;
 
-public class ContainerImageInfo {
+public class ContainerImageInfoPojo {
 
     private String containerImageNameDigest;
     private String containerImageNameTag;
