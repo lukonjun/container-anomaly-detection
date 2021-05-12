@@ -7,7 +7,7 @@ The TU Berlin DOS research Group created over the last several years different A
 */metrics-collector* spring boot application for collection metrics from pods    
 */pod-watcher*       spring boot application for watching new spawning pods 
 ### Used Metrics
-Metrics are polled by telegraf and then written into influxdb, this table gives an overview of the explicit metrics we are looking at  
+Most Metrics are polled by telegraf and then written into influxdb, this table gives an overview of the explicit metrics we are looking at  
 Metric | Source | Example
 -------- | --------  | --------  
 pod_name   |  kubernetes_pod_container  | traefik-6f9cbd9bd4-rgh45
@@ -20,8 +20,6 @@ rx_bytes (receive)   | kubernetes_pod_network | 1.774.377
 tx_bytes (transmit)   | kubernetes_pod_network | 953.169
 io_service_recursive_read   | docker_container_blkio | 8192
 io_service_recursive_write   | docker_container_blkio | 0
-
-Might be interessting
-logsfs_used_bytes kubernetes_pod_container  
-rootfs_used_bytes kubernetes_pod_container  
-used_bytes kubernetes_pod_volume  
+logsfs_used_bytes | kubernetes_pod_container  | 32.768
+rootfs_used_bytes | kubernetes_pod_container  | 49.152
+used_bytes | kubernetes_pod_volume  | 8.192
