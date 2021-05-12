@@ -13,13 +13,13 @@ Metric | Source | Example
 pod_name   |  kubernetes_pod_container  | traefik-6f9cbd9bd4-rgh45
 namespace   | kubernetes_pod_container  | kube-system
 memory_usage_bytes   | kubernetes_pod_container | 831.488
-cpu_usage_nanocores   | kubernetes_pod_container   | /metrics
+cpu_usage_nanocores   | kubernetes_pod_container   | 1.039.125
+logsfs_used_bytes | kubernetes_pod_container  | 32.768
+rootfs_used_bytes | kubernetes_pod_container  | 49.152
 imageSizeBytes   |  /api/v1/nodes/ (API)  | 326597
 image   | ? | ?
 rx_bytes (receive)   | kubernetes_pod_network | 1.774.377
 tx_bytes (transmit)   | kubernetes_pod_network | 953.169
 io_service_recursive_read   | docker_container_blkio | 8192
 io_service_recursive_write   | docker_container_blkio | 0
-logsfs_used_bytes | kubernetes_pod_container  | 32.768
-rootfs_used_bytes | kubernetes_pod_container  | 49.152
 used_bytes | kubernetes_pod_volume  | 8.192
