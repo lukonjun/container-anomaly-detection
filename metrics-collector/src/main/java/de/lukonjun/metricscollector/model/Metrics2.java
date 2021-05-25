@@ -1,11 +1,12 @@
 package de.lukonjun.metricscollector.model;
 
-import org.influxdb.annotation.Column;
-import org.influxdb.annotation.Measurement;
-
 import java.time.Instant;
 
 public class Metrics2 {
+
+    public static final String [] variableNames = {"label","cpuUsageNanocores","memoryUsageBytes"};
+
+    private String label;
 
     private Instant time;
 
@@ -36,6 +37,34 @@ public class Metrics2 {
     private Long ioServiceRecursiveWrite;
 
     private Long usedBytesVolume;
+
+    private Instant startTime;
+
+    private int runningTimeSeconds;
+
+    public int getRunningTimeSeconds() {
+        return runningTimeSeconds;
+    }
+
+    public void setRunningTimeSeconds(int runningTimeSeconds) {
+        this.runningTimeSeconds = runningTimeSeconds;
+    }
+
+    public Instant getStartTime() {
+        return startTime;
+    }
+
+    public void setStartTime(Instant startTime) {
+        this.startTime = startTime;
+    }
+
+    public String getLabel() {
+        return label;
+    }
+
+    public void setLabel(String label) {
+        this.label = label;
+    }
 
     public void setTime(Instant time) {
         this.time = time;

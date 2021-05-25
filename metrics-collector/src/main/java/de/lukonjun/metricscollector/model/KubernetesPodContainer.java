@@ -8,6 +8,28 @@ import java.time.Instant;
 @Measurement(name = "kubernetes_pod_container")
 public class KubernetesPodContainer extends Metrics {
 
+    public String getContainerName() {
+        return containerName;
+    }
+
+    public void setContainerName(String containerName) {
+        this.containerName = containerName;
+    }
+
+    public Instant getTime() {
+        return time;
+    }
+
+    public void setTime(Instant time) {
+        this.time = time;
+    }
+
+    @Column(name = "time")
+    private Instant time;
+
+    @Column(name = "container_name")
+    private String containerName;
+
     @Column(name = "pod_name")
     private String podName;
 

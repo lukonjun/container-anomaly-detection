@@ -136,6 +136,8 @@ public class PodController {
                     ContainerImageInfoPojo c = findContainerImageInfo(imageInfoList, podList, metadata.getName(), containerMetrics.getName());
 
                     Metrics2 m = new Metrics2();
+                    m.setNamespace(podMetrics.getMetadata().getNamespace());
+                    m.setStartTime(podMetrics.getMetadata().getCreationTimestamp().toInstant());
                     m.setPodName(metadata.getName());
                     m.setContainerName(containerMetrics.getName());
                     m.setImage(c.getContainerImageNameDigest()); // ImageNameDigest
