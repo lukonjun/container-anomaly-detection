@@ -1,11 +1,8 @@
 #!/bin/bash
-name_array=(bitnami wso2 t3n mirantis shubhamtatvamasi)
-repo_array=(https://charts.bitnami.com/bitnami https://helm.wso2.com https://storage.googleapis.com/t3n-helm-charts https://charts.mirantis.com https://shubhamtatvamasi.github.io/helm)
-label_array=(mysql nginx)
+name_array=(bitnami wso2 t3n mirantis shubhamtatvamasi microfunctions openstack groundhog2k)
+repo_array=(https://charts.bitnami.com/bitnami https://helm.wso2.com https://storage.googleapis.com/t3n-helm-charts https://charts.mirantis.com https://shubhamtatvamasi.github.io/helm https://microfunctionsio.github.io/microfunctions-helm https://registry.thecore.net.au/chartrepo/openstack https://groundhog2k.github.io/helm-charts/)
+label_array=(mysql nginx mongodb postgresql apache)
 namespace=helm-charts
-
-echo -n "Do you want to install or uninstall charts?"
-read VAR
 
 if ! command -v helm &> /dev/null
 then
@@ -20,14 +17,14 @@ then
 fi
 
 ### Install Part
-if [[ "$VAR" == "install" ]]
+if [[ "$1" == "install" ]]
 then
 
     echo "update helm repositories"
     helm repo update
 
     echo "add helm repositories"
-    total=5
+    total=${#repo_array[@]}
     for (( i=0; i<=$(( $total -1 )); i++ ))
     do 
         helm repo add "${name_array[$i]}" "${repo_array[$i]}"
@@ -39,7 +36,8 @@ then
         echo "create namespace $namespace"
         kubectl create namespace $namespace
     fi
-
+    
+    install_chart_counter=0
     lenght_name_array=${#name_array[@]}
     lenght_label_array=${#label_array[@]}
     for (( i=0; i<=$(( $lenght_name_array -1 )); i++ ))
@@ -51,12 +49,16 @@ then
             then
                 echo Running helm install --namespace $namespace release-${name_array[$i]}-${label_array[$l]} ${name_array[$i]}/${label_array[$l]}
                 command helm install --namespace $namespace release-${name_array[$i]}-${label_array[$l]} ${name_array[$i]}/${label_array[$l]} > /dev/null
+                ((install_chart_counter=install_chart_counter+1))
             fi
         done
     done
 
+    echo Attempted to installed $install_chart_counter Charts
+    # Todo Check for erros? if statement print out
+
 ### Uninstall Part
-elif [[ "$VAR" == "uninstall" ]]
+elif [[ "$1" == "uninstall" ]]
 then
 
     lenght_name_array=${#name_array[@]}
@@ -71,5 +73,5 @@ then
     done
 
 else
-  echo "No valid input, please specify install or uninstall"
+  echo "No valid input, please pass install or uninstall as an argument"
 fi
