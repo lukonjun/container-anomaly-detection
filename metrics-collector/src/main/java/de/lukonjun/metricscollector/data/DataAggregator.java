@@ -1,6 +1,5 @@
 package de.lukonjun.metricscollector.data;
 
-import de.lukonjun.metricscollector.CreateFile;
 import de.lukonjun.metricscollector.controller.PodController;
 import de.lukonjun.metricscollector.influxdb.InfluxController;
 import de.lukonjun.metricscollector.kubernetes.ApiConnection;
@@ -8,7 +7,6 @@ import de.lukonjun.metricscollector.ml.J48AnomalyDetector;
 import de.lukonjun.metricscollector.ml.Sample;
 import de.lukonjun.metricscollector.model.*;
 import de.lukonjun.metricscollector.pojo.ContainerPojo;
-import de.lukonjun.metricscollector.pojo.MetricsPojo;
 import io.kubernetes.client.openapi.ApiException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,7 +16,6 @@ import org.springframework.stereotype.Component;
 import weka.classifiers.trees.J48;
 import weka.core.Instances;
 import weka.core.converters.ArffSaver;
-import weka.filters.unsupervised.attribute.StringToNominal;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -88,7 +85,7 @@ public class DataAggregator {
             // kubernetes_pod_volume
             String query = "SELECT * FROM kubernetes_pod_volume WHERE pod_name =\'" + m.getPodName() + "\' Limit 1";
             //System.out.print(query);
-            List<KubernetesPodVolume> list = influxController.selectFromKubernetesPodNVolume(query);
+            List<KubernetesPodVolume> list = influxController.selectFromKubernetesPodVolume(query);
             KubernetesPodVolume k = list.get(0);
             m.setUsedBytesVolume(k.getUsedBytes());
         });
@@ -188,13 +185,11 @@ public class DataAggregator {
 
     }
 
-
-
     @Scheduled(fixedRateString = "${influxdb.metrics.collection.rate:10000}")
     public void decisionTree() throws Exception {
 
         // How often to fetched Metrics, sleeps for 10 seconds between each iteration
-        int fetchMetricsInterval = 10;
+        int fetchMetricsInterval = 1000;
         // Which labels should match when collecting container Metrics
         List<String> labels = new ArrayList<>();
         labels.add("mysql");
@@ -204,7 +199,7 @@ public class DataAggregator {
         labels.add("apache");
 
         logger.info("Fetching Metrics for Containers with the name " + labels.toString() +  " for " + fetchMetricsInterval+ " Iterations");
-        List<Metrics2> metrics2List = getMetrics(fetchMetricsInterval, labels);
+        List<Metrics2> metrics2List = getMetricsTimeInterval(fetchMetricsInterval, labels);
 
         // Write File with custom method to container_metrics.arff
         // J48 modelFromFile = new CreateFile().testDataSet();
@@ -222,7 +217,7 @@ public class DataAggregator {
                     m.getPodName().hashCode(),m.getNamespace().hashCode(),m.getMemoryUsageBytes(),m.getCpuUsageNanocores(),
                     m.getLogsfsUsedBytes(), m.getRootfsUsedBytes(), m.getImageSizeBytes(), m.getImageName().hashCode(),
                     m.getContainerName().hashCode(), m.getRx_bytes(), m.getTx_bytes(), m.getIoServiceRecursiveRead(),
-                    m.getIoServiceRecursiveWrite(), m.getUsedBytesVolume(), m.getRunningTimeSeconds()
+                    m.getIoServiceRecursiveWrite(), 0, m.getRunningTimeSeconds()
             };
             s.setMetricsArray(metricsArray);
             s.setLabel(m.getLabel());
@@ -276,29 +271,21 @@ public class DataAggregator {
 
         List<Metrics2> metrics2List = getMetricsTimeInterval(seconds,labels);
 
+        logger.info("Generated List with Metircs of the last " + seconds + " seconds and a size of " + metrics2List.size() + " entries");
+
     }
 
-    //@Scheduled(fixedRateString = "10000")
     public List<Metrics2> getMetricsTimeInterval(int seconds, List<String> labels) throws Exception {
 
+        List<Metrics2> listMetrics = new ArrayList<>();
+        List<Metrics2> listMetricsDynamic = new ArrayList<>();
         // Get Pod Metrics that dont change over time
         List<Metrics2> listMetricsStable = collectStableMetrics(labels);
 
-        // Get Pod Metrics that change over time
-        List<Metrics2> listMetricsDynamic = collectDynamicMetrics(seconds, labels, setOfPodUids(listMetricsStable));
-
-        List<Metrics2> listMetrics = new ArrayList<>();
-
-        // Write Stable Metrics into Dynamic Metrics
-        listMetricsDynamic.forEach(dynamicMetric -> {
-            for(Metrics2 stableMetric:listMetricsStable){
-                if(stableMetric.getPodName().equals(dynamicMetric.getPodName()) && stableMetric.getNamespace().equals(dynamicMetric.getNamespace())){
-                    // transferValues
-                    listMetrics.add(dynamicMetric);
-                    break;
-                }
-            }
-        });
+        for(Metrics2 m:listMetricsStable){
+            listMetricsDynamic = collectDynamicMetrics(seconds,m);
+            listMetrics.addAll(listMetricsDynamic);
+        }
 
         // Return List of Stable and Dynamic Metrics
         return listMetrics;
@@ -312,27 +299,56 @@ public class DataAggregator {
         return setPodUids;
     }
 
-    private List<Metrics2> collectDynamicMetrics(int seconds, List<String> labels, Set<String> setPodUids) throws Exception {
+    private List<Metrics2> collectDynamicMetrics(int seconds, Metrics2 m) throws Exception {
 
         List<Metrics2> dynamicMetrics = new ArrayList<>();
-        // Get Metrics for every Table
-        // What do we do if size of lists differ? Do we need to increase the timeout to inlfux if query take longer?
-        // Write Values from Influx to Metrics that let us compare if it matches to the labels set
-        List<Metrics2> dockerContainerBlkioMetrics = influxController.getMetricsFromDockerContainerBlkio(seconds,labels, setPodUids);
-        List<Metrics2> kubernetesPodContainerMetrics = influxController.getMetricsFromKubernetesPodContainer(seconds,labels);
-        List<Metrics2> kubernetesPodNetworkMetrics = influxController.getMetricsFromKubernetesPodNetwork(seconds,labels);
-        List<Metrics2> kubernetesPodVolume = influxController.getMetricsFromKubernetesPodVolume(seconds,labels);
-        int listLenght = dockerContainerBlkioMetrics.size();
-        if(listLenght != kubernetesPodContainerMetrics.size() || listLenght != kubernetesPodNetworkMetrics.size() || listLenght != kubernetesPodVolume.size()){
-            throw new Exception("List size of dynamic lists is not equal");
-        }
-        // Check the Time and Put the Metrics in One Object, if not matching, ignore
-        for(int i = 0; i < dockerContainerBlkioMetrics.size(); i++){
-            Metrics2 m = new Metrics2();
 
+        List<Metrics2> dockerContainerBlkioMetrics = influxController.getMetricsFromDockerContainerBlkio(seconds,m);
+        List<Metrics2> kubernetesPodContainerMetrics = influxController.getMetricsFromKubernetesPodContainer(seconds,m);
+        List<Metrics2> kubernetesPodNetworkMetrics = influxController.getMetricsFromKubernetesPodNetwork(seconds,m);
+        List<Metrics2> kubernetesPodVolumeMetrics = influxController.getMetricsFromKubernetesPodVolume(seconds,m);
+
+        // get size of smallest list
+        int sizeList1 = kubernetesPodNetworkMetrics.size() < kubernetesPodVolumeMetrics.size() ? kubernetesPodNetworkMetrics.size() : kubernetesPodVolumeMetrics.size();
+        int sizeList2 = dockerContainerBlkioMetrics.size() < kubernetesPodContainerMetrics.size() ? dockerContainerBlkioMetrics.size() : kubernetesPodContainerMetrics.size();
+        int sizeList = sizeList1 < sizeList2 ? sizeList1 : sizeList2;
+
+        for(int i = 0; i < sizeList; i++){
+            Metrics2 blkio = dockerContainerBlkioMetrics.get(i);
+            Metrics2 podMetrics = kubernetesPodContainerMetrics.get(i);
+            Metrics2 podNetwork = kubernetesPodNetworkMetrics.get(i);
+            //Metrics2 podVolume = kubernetesPodVolumeMetrics.get(i);
+            Metrics2 newMetricPoint = new Metrics2();
+            // Metric
+            // Running Seconds
+            newMetricPoint.setLabel(m.getLabel());
+            newMetricPoint.setStartTime(m.getStartTime());
+            newMetricPoint.setPodUid(m.getPodUid());
+            newMetricPoint.setPodName(m.getPodName());
+            newMetricPoint.setContainerName(m.getContainerName());
+            newMetricPoint.setNamespace(m.getNamespace());
+            newMetricPoint.setImageSizeBytes(m.getImageSizeBytes());
+            newMetricPoint.setImageName(m.getImageName());
+            newMetricPoint.setRunningTimeSeconds((int) Duration.between(blkio.getTime(), m.getStartTime()).toSeconds());
+            // blkio
+            newMetricPoint.setTime(blkio.getTime());
+            newMetricPoint.setIoServiceRecursiveRead(blkio.getIoServiceRecursiveRead());
+            newMetricPoint.setIoServiceRecursiveWrite(blkio.getIoServiceRecursiveWrite());
+            // podMetrics
+            newMetricPoint.setMemoryUsageBytes(podMetrics.getMemoryUsageBytes());
+            newMetricPoint.setCpuUsageNanocores(podMetrics.getCpuUsageNanocores());
+            newMetricPoint.setLogsfsUsedBytes(podMetrics.getLogsfsUsedBytes());
+            newMetricPoint.setRootfsUsedBytes(podMetrics.getRootfsUsedBytes());
+            dynamicMetrics.add(newMetricPoint);
+            // podNetwork
+            newMetricPoint.setTx_bytes(podNetwork.getTx_bytes());
+            newMetricPoint.setRx_bytes(podNetwork.getRx_bytes());
+            // podVolume
+            //newMetricPoint.setUsedBytesVolume(podVolume.getUsedBytesVolume());
+            logger.info("blkio time: " + blkio.getTime() + "podMetrics time: " + podMetrics.getTime()+ " podNetwork: " + podNetwork.getTime() + " podVolume: not defined atm");
         }
-        // Return List
-        return null;
+
+        return dynamicMetrics;
     }
 
     private List<Metrics2> collectStableMetrics(List<String> labels) throws IOException, ApiException {

@@ -60,6 +60,7 @@ public class PodController {
 
         List<Metrics2> metrics2List = new ArrayList<>();
         boolean checkForLabels = true;
+        String tmpLabel = null;
 
         // Dont check for specific label
         if(labels == null || labels.isEmpty()){
@@ -78,6 +79,7 @@ public class PodController {
                     if (checkForLabels) {
                         for (String label : labels)
                             if (metadata.getName().contains(label) && containerMetrics.getName().contains(label)) {
+                                tmpLabel = label;
                                 matchingLabel = true;
                             }
                     }
@@ -94,13 +96,15 @@ public class PodController {
 
                         Metrics2 m = new Metrics2();
                         m.setPodUid(podUid);
+                        m.setLabel(tmpLabel);
+                        m.setStartTime(podMetrics.getMetadata().getCreationTimestamp().toInstant()); // StartTime
                         m.setNamespace(metadata.getNamespace()); // Namespace
                         m.setPodName(metadata.getName()); // Pod Name
-                        // m.setContainerName(containerMetrics.getName()); //ContainerName twice??? TODO what is the correct value to choose here
                         m.setMemoryUsageBytes(memoryQuantity.getNumber().longValue()); // Memory Bytes
                         m.setCpuUsageNanocores(cpuQuantity.getNumber().longValue()); // CPU
-                        m.setContainerName(c.getContainerImageNameDigest()); // ImageNameDigest
+                        m.setContainerName(containerMetrics.getName()); // Container Name
                         m.setImageSizeBytes(c.getContainerImageSizeBytes()); // ImageSizeBytes
+                        m.setImageName(c.getContainerImageNameDigest()); // ImageNameDigest
                         metrics2List.add(m);
                     }
                 }

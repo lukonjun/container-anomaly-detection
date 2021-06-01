@@ -7,6 +7,7 @@ import de.lukonjun.metricscollector.controller.PodController;
 import io.kubernetes.client.openapi.ApiException;
 import org.influxdb.InfluxDB;
 import org.influxdb.InfluxDBFactory;
+import org.influxdb.annotation.Column;
 import org.influxdb.dto.*;
 import org.influxdb.impl.InfluxDBResultMapper;
 import org.slf4j.Logger;
@@ -18,6 +19,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -157,7 +159,7 @@ public class InfluxController {
         return memoryPointList;
     }
 
-    public List<KubernetesPodVolume> selectFromKubernetesPodNVolume(String query){
+    public List<KubernetesPodVolume> selectFromKubernetesPodVolume(String query){
         QueryResult queryResult = connection
                 .query(new Query(query));
 
@@ -179,37 +181,88 @@ public class InfluxController {
         return memoryPointList;
     }
 
-    public List<Metrics2> getMetricsFromDockerContainerBlkio(int seconds, List<String> labels, Set<String> setPodUids) {
-        String query = "SELECT * FROM \"docker_container_blkio\" WHERE time > now() -" + seconds + "s";
-        // container id, container_image, container_name
-        // io.kubernetes.container.name io.kubernetes.pod.name io.kubernetes.pod.namespace io.kubernetes.pod.uid
-        List<Metrics2> metrics2List = new ArrayList<>();
-        /*
-        for(String podUid)
-        List<DockerContainerBlkio> blkioList = selectDockerContainerBlkio(query);
-        // Mapping of Values
+    public List<Metrics2> getMetricsFromDockerContainerBlkio(int seconds, Metrics2 m) {
+        String query = "SELECT * FROM \"docker_container_blkio\" WHERE time > now() -" + seconds + "s AND (\"io.kubernetes.container.name\" ='" + m.getContainerName() + "') AND (\"io.kubernetes.pod.uid\" ='" + m.getPodUid() +"') AND (\"io.kubernetes.docker.type\" ='container') AND (\"device\" ='total')";
+        logger.info("Generated Influxql query: " + query);
 
-        SELECT * FROM "docker_container_blkio" WHERE time > now() -100s AND "io.kubernetes.pod.uid" = '793a8ef8-dc42-4491-95fe-6ba3437038ba'
-                PodSandbox
-        // SELECT * FROM "docker_container_blkio" WHERE time > now() -100s AND ("io.kubernetes.pod.uid" = '793a8ef8-dc42-4491-95fe-6ba3437038ba' OR "io.kubernetes.pod.uid" = 'a81cc2b1-ce2d-4224-8d37-8008926b43e3')
-        blkioList.forEach(b -> {
-            Metrics2 m = new Metrics2();
-            m.setIoServiceRecursiveWrite(b.getIoServiceRecursiveWrite());
-            m.setIoServiceRecursiveRead(b.getIoServiceRecursiveRead());
+        List<DockerContainerBlkio> containerBlkioList = selectDockerContainerBlkio(query);
+        List<Metrics2> metrics2List = new ArrayList<>();
+
+        containerBlkioList.forEach(b -> {
+            Metrics2 metricPoint = new Metrics2();
+            metricPoint.setTime(b.getTime());
+            metricPoint.setPodUid(m.getPodUid());
+            metricPoint.setContainerName(m.getContainerName());
+            // Specifc Metrics
+            metricPoint.setIoServiceRecursiveWrite(b.getIoServiceRecursiveWrite());
+            metricPoint.setIoServiceRecursiveRead(b.getIoServiceRecursiveRead());
+            metrics2List.add(metricPoint);
         });
-         */
+
         return metrics2List;
     }
 
-    public List<Metrics2> getMetricsFromKubernetesPodContainer(int seconds, List<String> labels) {
-        return null;
+    public List<Metrics2> getMetricsFromKubernetesPodContainer(int seconds, Metrics2 m) {
+        String query = "SELECT * FROM \"kubernetes_pod_container\" WHERE time > now() -" + seconds + "s AND (\"container_name\" ='" + m.getContainerName() + "') AND (\"pod_name\" ='" + m.getPodName() +"') AND (\"namespace\" ='" + m.getNamespace() + "')";
+        logger.info("Generated Influxql query: " + query);
+
+        List<KubernetesPodContainer> podContainerList = selectFromKubernetesPodContainer(query);
+        List<Metrics2> metrics2List = new ArrayList<>();
+
+        podContainerList.forEach(p -> {
+            Metrics2 metricPoint = new Metrics2();
+            metricPoint.setTime(p.getTime());
+            metricPoint.setPodUid(m.getPodUid());
+            metricPoint.setContainerName(m.getContainerName());
+            // Specifc Metrics
+            metricPoint.setMemoryUsageBytes(p.getMemoryUsageBytes());
+            metricPoint.setCpuUsageNanocores(p.getCpuUsageNanocores());
+            metricPoint.setLogsfsUsedBytes(p.getLogsfsUsedBytes());
+            metricPoint.setRootfsUsedBytes(p.getRootfsUsedBytes());
+            metrics2List.add(metricPoint);
+        });
+
+        return metrics2List;
     }
 
-    public List<Metrics2> getMetricsFromKubernetesPodNetwork(int seconds, List<String> labels) {
-        return null;
+    public List<Metrics2> getMetricsFromKubernetesPodNetwork(int seconds, Metrics2 m) {
+        String query = "SELECT * FROM \"kubernetes_pod_network\" WHERE time > now() -" + seconds + "s AND (\"pod_name\" ='" + m.getPodName() +"') AND (\"namespace\" ='" + m.getNamespace() + "')";
+        logger.info("Generated Influxql query: " + query);
+
+        List<KubernetesPodNetwork> kubernetesPodNetworkList = selectFromKubernetesPodNetwork(query);
+        List<Metrics2> metrics2List = new ArrayList<>();
+
+        kubernetesPodNetworkList.forEach(p -> {
+            Metrics2 metricPoint = new Metrics2();
+            metricPoint.setTime(p.getTime());
+            metricPoint.setPodUid(m.getPodUid());
+            metricPoint.setContainerName(m.getContainerName());
+            // Specifc Metrics
+            metricPoint.setRx_bytes(p.getRxBytes());
+            metricPoint.setTx_bytes(p.getTxBytes());
+            metrics2List.add(metricPoint);
+        });
+
+        return metrics2List;
     }
 
-    public List<Metrics2> getMetricsFromKubernetesPodVolume(int seconds, List<String> labels) {
-        return null;
+    public List<Metrics2> getMetricsFromKubernetesPodVolume(int seconds, Metrics2 m) {
+        String query = "SELECT * FROM \"kubernetes_pod_volume\" WHERE time > now() -" + seconds + "s AND (\"pod_name\" ='" + m.getPodName() +"') AND (\"namespace\" ='" + m.getNamespace() + "')";
+        logger.info("Generated Influxql query: " + query);
+
+        List<KubernetesPodVolume> kubernetesPodVolumeList = selectFromKubernetesPodVolume(query);
+        List<Metrics2> metrics2List = new ArrayList<>();
+
+        kubernetesPodVolumeList.forEach(p -> {
+            Metrics2 metricPoint = new Metrics2();
+            metricPoint.setTime(p.getTime());
+            metricPoint.setPodUid(m.getPodUid());
+            metricPoint.setContainerName(m.getContainerName());
+            // Specifc Metrics
+            metricPoint.setUsedBytesVolume(p.getUsedBytes());
+            metrics2List.add(metricPoint);
+        });
+
+        return metrics2List;
     }
 }
