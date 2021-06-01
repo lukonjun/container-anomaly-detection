@@ -18,6 +18,9 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
+
 import weka.core.Instances;
 import weka.core.converters.ConverterUtils.DataSource;
 import weka.classifiers.trees.J48;
@@ -59,7 +62,14 @@ public class CreateFile {
         printWriter.println("");
         printWriter.println("@data");
 
-        dataAggregator.getMetrics().forEach(m ->{
+        List<String> labels = new ArrayList<>();
+        labels.add("mysql");
+        labels.add("nginx");
+        labels.add("mongodb");
+        labels.add("postgresql");
+        labels.add("apache");
+
+        dataAggregator.getMetrics(1, labels).forEach(m ->{
             // pod_name runningTimeSeconds imageSizeBytes cpuUsageNanocores memoryUsageBytes label
             printWriter.println(m.getRunningTimeSeconds() + "," + m.getImageSizeBytes() + "," +
                     m.getCpuUsageNanocores() + "," + m.getMemoryUsageBytes() + "," + m.getLabel());
@@ -70,7 +80,7 @@ public class CreateFile {
     }
 
     @Test
-    public void testDataSet(){
+    public J48 testDataSet(){
         try {
             String absolutePath = "/Users/lucasstocksmeier/Coding/container-anomaly-detection/metrics-collector/src/main/resources/ml/container_metrics.arff";
             DataSource src = new DataSource(absolutePath);
@@ -87,9 +97,12 @@ public class CreateFile {
             mytree.buildClassifier(dt); // train model?
 
             weka.core.SerializationHelper.write("/Users/lucasstocksmeier/Coding/container-anomaly-detection/metrics-collector/src/main/resources/ml/my_tree.model", mytree);
+
+            return mytree;
         }
         catch (Exception e) {
             System.out.println("Error!!!!\n" + e.getMessage());
+            return null;
         }
     }
 

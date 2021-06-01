@@ -1,5 +1,6 @@
 package de.lukonjun.metricscollector.controller;
 
+import de.lukonjun.metricscollector.kubernetes.ApiConnection;
 import de.lukonjun.metricscollector.model.Metrics2;
 import de.lukonjun.metricscollector.pojo.ContainerImageInfoPojo;
 import de.lukonjun.metricscollector.pojo.MetricsPojo;
@@ -19,6 +20,7 @@ import io.kubernetes.client.util.ClientBuilder;
 import io.kubernetes.client.util.KubeConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.stereotype.Controller;
 
@@ -35,53 +37,34 @@ public class PodController {
 
     Logger logger = LoggerFactory.getLogger(PodController.class);
 
-        public List<MetricsPojo> collectPodMetrics() throws IOException, ApiException {
+    @Autowired
+    ApiConnection apiConnection;
 
-        // file path to your KubeConfig
-        String kubeConfigPath = System.getenv("HOME") + "/.kube/config";
+    public List<Metrics2> collectPodMetrics(List<String> labels) throws IOException, ApiException {
 
-        // loading the out-of-cluster config, a kubeconfig from file-system
-        ApiClient client =
-                ClientBuilder.kubeconfig(KubeConfig.loadKubeConfig(new FileReader(kubeConfigPath))).build();
+        // Connect to the Kubernetes Api
+        ApiConnection.ApiConnectionPojo a = apiConnection.createConnection();
 
-        // set the global default api-client to the in-cluster one from above
-        Configuration.setDefaultApiClient(client);
+        List<Metrics2> metricsList = fillMetricsPojo(a.getClient(), a.getApi(), labels);
 
-        // the CoreV1Api loads default api-client from global configuration.
-        CoreV1Api api = new CoreV1Api();
-/*
-        // loading the in-cluster config, including:
-        //   1. service-account CA
-        //   2. service-account bearer-token
-        //   3. service-account namespace
-        //   4. master endpoints(ip, port) from pre-set environment variables
-        ApiClient client = ClientBuilder.cluster().build();
-
-        // if you prefer not to refresh service account token, please use:
-        // ApiClient client = ClientBuilder.oldCluster().build();
-
-        // set the global default api-client to the in-cluster one from above
-        Configuration.setDefaultApiClient(client);
-
-        // the CoreV1Api loads default api-client from global configuration.
-        CoreV1Api api = new CoreV1Api();
-*/
-
-        List<MetricsPojo> metricsPojoList = fillMetricsPojo(client, api);
-
-        return metricsPojoList;
+        return metricsList;
     }
 
-
-
-    private List<MetricsPojo> fillMetricsPojo(ApiClient client, CoreV1Api api) throws IOException, ApiException {
+    private List<Metrics2>fillMetricsPojo(ApiClient client, CoreV1Api api, List<String> labels) throws IOException, ApiException {
 
         List<ContainerImageInfoPojo> imageInfoList = collectContainerImageInfo(api);
 
         ProtoClient pc = new ProtoClient(client);
         final ProtoClient.ObjectOrStatus<V1.NamespaceList> namespaceList = pc.list(V1.NamespaceList.newBuilder(), "/api/v1/namespaces");
         final ProtoClient.ObjectOrStatus<V1.PodList> podList = pc.list(V1.PodList.newBuilder(), "/api/v1/pods");
-        List<MetricsPojo> metricsPojoList = new ArrayList<>();
+
+        List<Metrics2> metrics2List = new ArrayList<>();
+        boolean checkForLabels = true;
+
+        // Dont check for specific label
+        if(labels == null || labels.isEmpty()){
+            checkForLabels = false;
+        }
 
         for(V1.Namespace namespace:namespaceList.object.getItemsList()){
             // Pod Metrics for each namespace
@@ -90,29 +73,51 @@ public class PodController {
             for(PodMetrics podMetrics:podMetricsList.getItems()){
                 V1ObjectMeta metadata = podMetrics.getMetadata();
 
-                for(ContainerMetrics containerMetrics:podMetrics.getContainers()){
+                for(ContainerMetrics containerMetrics:podMetrics.getContainers()) {
+                    boolean matchingLabel = false;
+                    if (checkForLabels) {
+                        for (String label : labels)
+                            if (metadata.getName().contains(label) && containerMetrics.getName().contains(label)) {
+                                matchingLabel = true;
+                            }
+                    }
 
-                    ContainerImageInfoPojo c = findContainerImageInfo(imageInfoList, podList, metadata.getName(), containerMetrics.getName());
 
-                    Map<String, Quantity> stringQuantityMap = containerMetrics.getUsage();
-                    Quantity cpuQuantity = stringQuantityMap.get("cpu");
-                    Quantity memoryQuantity = stringQuantityMap.get("memory");
+                    if(matchingLabel || !checkForLabels) {
+                        ContainerImageInfoPojo c = findContainerImageInfo(imageInfoList, podList, metadata.getName(), containerMetrics.getName());
 
-                    MetricsPojo m = new MetricsPojo();
-                    m.setNamespace(metadata.getNamespace()); // Namespace
-                    m.setPodName(metadata.getName()); // Pod Name
-                    m.setContainerName(containerMetrics.getName());
-                    m.setMemoryBytes(memoryQuantity.getNumber().longValue()); // Memory Bytes
-                    m.setCpu(cpuQuantity.getNumber().doubleValue()); // CPU
-                    m.setImage(c.getContainerImageNameDigest()); // ImageNameDigest
-                    m.setImageSizeBytes(c.getContainerImageSizeBytes()); // ImageSizeBytes
-                    metricsPojoList.add(m);
+                        Map<String, Quantity> stringQuantityMap = containerMetrics.getUsage();
+                        Quantity cpuQuantity = stringQuantityMap.get("cpu");
+                        Quantity memoryQuantity = stringQuantityMap.get("memory");
+
+                        String podUid = getPodUid(metadata.getName(),metadata.getNamespace(), podList);
+
+                        Metrics2 m = new Metrics2();
+                        m.setPodUid(podUid);
+                        m.setNamespace(metadata.getNamespace()); // Namespace
+                        m.setPodName(metadata.getName()); // Pod Name
+                        // m.setContainerName(containerMetrics.getName()); //ContainerName twice??? TODO what is the correct value to choose here
+                        m.setMemoryUsageBytes(memoryQuantity.getNumber().longValue()); // Memory Bytes
+                        m.setCpuUsageNanocores(cpuQuantity.getNumber().longValue()); // CPU
+                        m.setContainerName(c.getContainerImageNameDigest()); // ImageNameDigest
+                        m.setImageSizeBytes(c.getContainerImageSizeBytes()); // ImageSizeBytes
+                        metrics2List.add(m);
+                    }
                 }
             }
         }
-        logger.info("Collected Metrics from " + metricsPojoList.size() + " containers");
+        //logger.info("Collected Metrics from " + metrics2List.size() + " containers");
 
-        return metricsPojoList;
+        return metrics2List;
+    }
+
+    private String getPodUid(String podName, String namespace, ProtoClient.ObjectOrStatus<V1.PodList> podList) {
+        for(V1.Pod p:podList.object.getItemsList()) {
+                if (podName.equals(p.getMetadata().getName()) && namespace.equals(p.getMetadata().getNamespace())) {
+                    return p.getMetadata().getUid();
+                }
+        }
+        return null;
     }
 
     public List<Metrics2> fillMetrics2(ApiClient client, CoreV1Api api) throws IOException, ApiException {
@@ -140,13 +145,13 @@ public class PodController {
                     m.setStartTime(podMetrics.getMetadata().getCreationTimestamp().toInstant());
                     m.setPodName(metadata.getName());
                     m.setContainerName(containerMetrics.getName());
-                    m.setImage(c.getContainerImageNameDigest()); // ImageNameDigest
+                    m.setImageName(c.getContainerImageNameDigest()); // ImageNameDigest
                     m.setImageSizeBytes(c.getContainerImageSizeBytes()); // ImageSizeBytes
                     metrics2List.add(m);
                 }
             }
         }
-        logger.info("Collected Metrics from " + metrics2List.size() + " containers");
+        //logger.info("Collected Metrics from " + metrics2List.size() + " containers");
 
         return metrics2List;
     }

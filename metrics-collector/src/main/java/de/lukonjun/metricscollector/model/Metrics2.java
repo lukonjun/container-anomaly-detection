@@ -24,9 +24,11 @@ public class Metrics2 {
 
     private Long imageSizeBytes;
 
-    private String image;
+    private String imageName;
 
     private String containerName;
+
+    private String podUid;
 
     private Long rx_bytes;
 
@@ -41,6 +43,14 @@ public class Metrics2 {
     private Instant startTime;
 
     private int runningTimeSeconds;
+
+    public String getPodUid() {
+        return podUid;
+    }
+
+    public void setPodUid(String podUid) {
+        this.podUid = podUid;
+    }
 
     public int getRunningTimeSeconds() {
         return runningTimeSeconds;
@@ -98,8 +108,8 @@ public class Metrics2 {
         this.imageSizeBytes = imageSizeBytes;
     }
 
-    public void setImage(String image) {
-        this.image = image;
+    public void setImageName(String imageName) {
+        this.imageName = imageName;
     }
 
     public void setContainerName(String containerName) {
@@ -166,8 +176,8 @@ public class Metrics2 {
         return imageSizeBytes;
     }
 
-    public String getImage() {
-        return image;
+    public String getImageName() {
+        return imageName;
     }
 
     public String getContainerName() {

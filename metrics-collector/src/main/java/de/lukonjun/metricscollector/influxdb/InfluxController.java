@@ -1,9 +1,6 @@
 package de.lukonjun.metricscollector.influxdb;
 
-import de.lukonjun.metricscollector.model.DockerContainerBlkio;
-import de.lukonjun.metricscollector.model.KubernetesPodContainer;
-import de.lukonjun.metricscollector.model.KubernetesPodNetwork;
-import de.lukonjun.metricscollector.model.KubernetesPodVolume;
+import de.lukonjun.metricscollector.model.*;
 import de.lukonjun.metricscollector.pojo.ContainerPojo;
 import de.lukonjun.metricscollector.pojo.MetricsPojo;
 import de.lukonjun.metricscollector.controller.PodController;
@@ -21,7 +18,9 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 @Component
@@ -81,7 +80,8 @@ public class InfluxController {
                 + " ON " + databaseName + " DURATION 30d REPLICATION 1 DEFAULT"));
         influxDB.setRetentionPolicy(retentionPolicyName);
 
-        List<MetricsPojo> metricsPojoList = podController.collectPodMetrics();
+        List<MetricsPojo> metricsPojoList = null;
+                //podController.collectPodMetrics();
 
         boolean printOutMetrics = true;
         if(printOutMetrics) {
@@ -177,5 +177,39 @@ public class InfluxController {
                 .toPOJO(queryResult, DockerContainerBlkio.class);
 
         return memoryPointList;
+    }
+
+    public List<Metrics2> getMetricsFromDockerContainerBlkio(int seconds, List<String> labels, Set<String> setPodUids) {
+        String query = "SELECT * FROM \"docker_container_blkio\" WHERE time > now() -" + seconds + "s";
+        // container id, container_image, container_name
+        // io.kubernetes.container.name io.kubernetes.pod.name io.kubernetes.pod.namespace io.kubernetes.pod.uid
+        List<Metrics2> metrics2List = new ArrayList<>();
+        /*
+        for(String podUid)
+        List<DockerContainerBlkio> blkioList = selectDockerContainerBlkio(query);
+        // Mapping of Values
+
+        SELECT * FROM "docker_container_blkio" WHERE time > now() -100s AND "io.kubernetes.pod.uid" = '793a8ef8-dc42-4491-95fe-6ba3437038ba'
+                PodSandbox
+        // SELECT * FROM "docker_container_blkio" WHERE time > now() -100s AND ("io.kubernetes.pod.uid" = '793a8ef8-dc42-4491-95fe-6ba3437038ba' OR "io.kubernetes.pod.uid" = 'a81cc2b1-ce2d-4224-8d37-8008926b43e3')
+        blkioList.forEach(b -> {
+            Metrics2 m = new Metrics2();
+            m.setIoServiceRecursiveWrite(b.getIoServiceRecursiveWrite());
+            m.setIoServiceRecursiveRead(b.getIoServiceRecursiveRead());
+        });
+         */
+        return metrics2List;
+    }
+
+    public List<Metrics2> getMetricsFromKubernetesPodContainer(int seconds, List<String> labels) {
+        return null;
+    }
+
+    public List<Metrics2> getMetricsFromKubernetesPodNetwork(int seconds, List<String> labels) {
+        return null;
+    }
+
+    public List<Metrics2> getMetricsFromKubernetesPodVolume(int seconds, List<String> labels) {
+        return null;
     }
 }
