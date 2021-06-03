@@ -9,6 +9,7 @@ import weka.core.DenseInstance;
 import weka.core.Instance;
 import weka.core.Instances;
 
+import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -103,6 +104,13 @@ public class J48AnomalyDetector {
             instance.setClassValue((double) numberMapping.get(sample.getLabel()));
             instances.add(instance);
         }
+    }
+
+    public String inputInstanceIntoModel(J48 wekaModel, Instance instance) throws Exception {
+        double result = wekaModel.classifyInstance(instance);
+        //Get predicted label
+        String label = instance.classAttribute().value((int) result);
+        return label;
     }
 
 }

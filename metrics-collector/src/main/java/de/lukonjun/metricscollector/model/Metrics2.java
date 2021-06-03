@@ -1,5 +1,7 @@
 package de.lukonjun.metricscollector.model;
 
+import io.kubernetes.client.proto.Meta;
+
 import java.time.Instant;
 
 public class Metrics2 {
@@ -40,7 +42,7 @@ public class Metrics2 {
 
     private Long usedBytesVolume;
 
-    private Instant startTime;
+    private Meta.Time startTime;
 
     private int runningTimeSeconds;
 
@@ -60,11 +62,11 @@ public class Metrics2 {
         this.runningTimeSeconds = runningTimeSeconds;
     }
 
-    public Instant getStartTime() {
+    public Meta.Time getStartTime() {
         return startTime;
     }
 
-    public void setStartTime(Instant startTime) {
+    public void setStartTime(Meta.Time startTime) {
         this.startTime = startTime;
     }
 

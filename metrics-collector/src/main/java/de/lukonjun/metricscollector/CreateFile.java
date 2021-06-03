@@ -45,7 +45,7 @@ public class CreateFile {
     }
 
     //@Scheduled(fixedRateString = "10000")
-    public void writingToFile() throws InterruptedException, ApiException, IOException {
+    public void writingToFile() throws Exception {
 
         String absolutePath = "/Users/lucasstocksmeier/Coding/container-anomaly-detection/metrics-collector/src/main/resources/ml/container_metrics.arff";
         File file = new File(absolutePath);

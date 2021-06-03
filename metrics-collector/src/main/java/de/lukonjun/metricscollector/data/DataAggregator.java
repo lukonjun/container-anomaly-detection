@@ -14,6 +14,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import weka.classifiers.trees.J48;
+import weka.core.DenseInstance;
+import weka.core.Instance;
 import weka.core.Instances;
 import weka.core.converters.ArffSaver;
 
@@ -104,16 +106,16 @@ public class DataAggregator {
         // Running Time
         // actual time - creationTimestamp": "2021-05-21T09:08:27Z"
         metricsPojoList.forEach(m ->{
-            Instant startTime = m.getStartTime();
+            Instant startTime = null; // m.getStartTime();
             Instant currentTime = m.getTime();
             //https://stackoverflow.com/questions/55779996/calculate-days-hours-and-minutes-between-two-instants
             // Or use Duration
             Duration duration = Duration.between(currentTime, startTime);
-            //System.out.println(duration);
-            //System.out.println(m.getPodName() +" is running for seconds: " + duration.toSeconds());    // prints: 65
+            System.out.println(duration);
+            System.out.println(m.getPodName() +" is running for seconds: " + duration.toSeconds());    // prints: 65
 
             m.setRunningTimeSeconds((int)duration.toSeconds());
-            //System.out.println(m.getPodName() +" running time is " + duration);
+            System.out.println(m.getPodName() +" running time is " + duration);
         });
 
         logger.info("Fetched metrics for " + metricsPojoList.size() + " containers");
@@ -145,7 +147,7 @@ public class DataAggregator {
         return filteredMetricsList;
     }
 
-    public List<Metrics2> getMetrics(int repetitions, List<String> labels) throws IOException, ApiException, InterruptedException {
+    public List<Metrics2> getMetrics(int repetitions, List<String> labels) throws Exception {
 
         // Search for containers that match the labels
         List<ContainerPojo> containerPojoList = new ArrayList<>();
@@ -256,6 +258,16 @@ public class DataAggregator {
 
         System.out.println("Decision Tree");
         System.out.println(wekaModel.toString());
+
+        logger.info("Test our created Model");
+        double[] values = new double[]{
+                -2045226423,-1594835516,8769536,0,32768,65536,132899597,-1866261913,104760218,998,42,256,0,0,129744
+        };
+        Instance instance = new DenseInstance(1.0, values);
+        instance.setDataset(instances);
+        String label = j48AnomalyDetector.inputInstanceIntoModel(wekaModel,instance);
+        System.out.println("Nginx Pod get recognized by the model as: " + label);
+
     }
 
     //@Scheduled(fixedRateString = "1000")
@@ -320,16 +332,18 @@ public class DataAggregator {
             //Metrics2 podVolume = kubernetesPodVolumeMetrics.get(i);
             Metrics2 newMetricPoint = new Metrics2();
             // Metric
-            // Running Seconds
             newMetricPoint.setLabel(m.getLabel());
-            newMetricPoint.setStartTime(m.getStartTime());
             newMetricPoint.setPodUid(m.getPodUid());
             newMetricPoint.setPodName(m.getPodName());
             newMetricPoint.setContainerName(m.getContainerName());
             newMetricPoint.setNamespace(m.getNamespace());
             newMetricPoint.setImageSizeBytes(m.getImageSizeBytes());
             newMetricPoint.setImageName(m.getImageName());
-            newMetricPoint.setRunningTimeSeconds((int) Duration.between(blkio.getTime(), m.getStartTime()).toSeconds());
+            //Time
+            newMetricPoint.setStartTime(m.getStartTime());
+            newMetricPoint.setTime(blkio.getTime());
+            Duration duration = Duration.between(Instant.ofEpochSecond(m.getStartTime().getSeconds(),m.getStartTime().getNanos()), blkio.getTime());
+            newMetricPoint.setRunningTimeSeconds((int)duration.toSeconds());
             // blkio
             newMetricPoint.setTime(blkio.getTime());
             newMetricPoint.setIoServiceRecursiveRead(blkio.getIoServiceRecursiveRead());
@@ -351,7 +365,7 @@ public class DataAggregator {
         return dynamicMetrics;
     }
 
-    private List<Metrics2> collectStableMetrics(List<String> labels) throws IOException, ApiException {
+    private List<Metrics2> collectStableMetrics(List<String> labels) throws Exception {
         return podController.collectPodMetrics(labels);
     }
 

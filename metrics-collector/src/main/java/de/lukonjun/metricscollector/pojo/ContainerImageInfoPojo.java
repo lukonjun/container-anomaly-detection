@@ -2,18 +2,9 @@ package de.lukonjun.metricscollector.pojo;
 
 public class ContainerImageInfoPojo {
 
-    private String podUid;
     private String containerImageNameDigest;
     private String containerImageNameTag;
     private Long containerImageSizeBytes;
-
-    public String getPodUid() {
-        return podUid;
-    }
-
-    public void setPodUid(String podUid) {
-        this.podUid = podUid;
-    }
 
     public void setContainerImageNameDigest(String containerImageNameDigest) {
         this.containerImageNameDigest = containerImageNameDigest;
