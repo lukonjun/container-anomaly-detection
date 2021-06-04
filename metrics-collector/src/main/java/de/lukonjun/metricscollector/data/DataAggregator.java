@@ -229,22 +229,40 @@ public class DataAggregator {
         J48AnomalyDetector j48AnomalyDetector = new J48AnomalyDetector();
 
         // Init weka model
-        Instances instances = j48AnomalyDetector.createDataset(trainingSamples);
-        j48AnomalyDetector.fillDataset(instances, trainingSamples);
+        //Instances instances = j48AnomalyDetector.createDataset(trainingSamples);
+        //j48AnomalyDetector.fillDataset(instances, trainingSamples);
+        // podName,"namespace","memoryUsageBytes","cpuUsageNanocores","logsfsUsedBytes","rootfsUsedBytes","imageSizeBytes", "image", "containerName","rx_bytes","tx_bytes", "ioServiceRecursiveRead", "ioServiceRecursiveWrite","usedBytesVolume","runningTimeSeconds"
+        List<boolean[]> filterList = new ArrayList<>();
+        filterList.add(null);
+        boolean [] onlyStrings = new boolean[]{true,true,false,false,false,false,false,true,true,false,false,false,false,false,false};
+        filterList.add(onlyStrings);
+        boolean [] onlyNumbers = new boolean[]{false,false,true,true,true,true,true,false,false,true,true,true,true,true,true};
+        filterList.add(onlyNumbers);
+        for(boolean[] filter:filterList) {
 
-        // write to file for comparison
-        // From https://waikato.github.io/weka-wiki/formats_and_processing/save_instances_to_arff/
-        String absolutePath = "/Users/lucasstocksmeier/Coding/container-anomaly-detection/metrics-collector/src/main/resources/ml/container_metrics_generated.arff";
-        ArffSaver saver = new ArffSaver();
-        saver.setInstances(instances);
-        saver.setFile(new File(absolutePath));
-        saver.writeBatch();
-        logger.info("Write Test Sample in arff Format to File " + absolutePath);
+            Instances instancesWithFilter = j48AnomalyDetector.createDatasetWithFilter(trainingSamples, filter);
+            j48AnomalyDetector.fillDatasetWithFilter(instancesWithFilter, trainingSamples, filter);
 
-        // Train weka model
-        J48 wekaModel = new J48();
+            // write to file for comparison
+            // From https://waikato.github.io/weka-wiki/formats_and_processing/save_instances_to_arff/
+            String fileName = "";
+            if(filter != null) {
+                fileName = filter.getClass().getName();
+                logger.info(filter.getClass().getName());
+            } else {
+                fileName = "";
+            }
+            String absolutePath = "/Users/lucasstocksmeier/Coding/container-anomaly-detection/metrics-collector/src/main/resources/ml/container_metrics_" + fileName + ".arff";
+            ArffSaver saver = new ArffSaver();
+            saver.setInstances(instancesWithFilter);
+            saver.setFile(new File(absolutePath));
+            saver.writeBatch();
+            logger.info("Write Test Sample in arff Format to File " + absolutePath);
 
-        // Custom Options
+            // Train weka model
+            J48 wekaModel = new J48();
+
+            // Custom Options
         /*
         String[] options = new String[4];
         options[0] = "-C";
@@ -254,20 +272,20 @@ public class DataAggregator {
         wekaModel.setOptions(options);
         */
 
-        wekaModel.buildClassifier(instances);
+            wekaModel.buildClassifier(instancesWithFilter);
 
-        System.out.println("Decision Tree");
-        System.out.println(wekaModel.toString());
+            System.out.println("Decision Tree");
+            System.out.println(wekaModel.toString());
 
-        logger.info("Test our created Model");
-        double[] values = new double[]{
-                -2045226423,-1594835516,8769536,0,32768,65536,132899597,-1866261913,104760218,998,42,256,0,0,129744
-        };
-        Instance instance = new DenseInstance(1.0, values);
-        instance.setDataset(instances);
-        String label = j48AnomalyDetector.inputInstanceIntoModel(wekaModel,instance);
-        System.out.println("Nginx Pod get recognized by the model as: " + label);
-
+            logger.info("Test our created Model");
+            double[] values = new double[]{
+                    -2045226423, -1594835516, 8769536, 0, 32768, 65536, 132899597, -1866261913, 104760218, 998, 42, 256, 0, 0, 129744
+            };
+            Instance instance = new DenseInstance(1.0, values);
+            instance.setDataset(instancesWithFilter);
+            String label = j48AnomalyDetector.inputInstanceIntoModel(wekaModel, instance);
+            System.out.println("Nginx Pod get recognized by the model as: " + label);
+        }
     }
 
     //@Scheduled(fixedRateString = "1000")
