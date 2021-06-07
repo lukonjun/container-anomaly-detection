@@ -1,9 +1,0 @@
-@relation container_metrics
-
-@attribute runningTimeSeconds numeric
-@attribute imageSizeBytes numeric
-@attribute cpuUsageNanocores numeric
-@attribute memoryUsageBytes numeric
-@attribute label {mysql, nginx}
-
-@data
