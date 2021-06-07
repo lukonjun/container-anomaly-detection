@@ -1,0 +1,15 @@
+J48 pruned tree
+------------------
+
+imageSizeBytes <= 260864226
+|   containerName <= -595131349
+|   |   podName <= 959035860: postgresql (100.0)
+|   |   podName > 959035860: apache (100.0)
+|   containerName > -595131349: nginx (495.0)
+imageSizeBytes > 260864226
+|   logsfsUsedBytes <= 17829888: mysql (360.0)
+|   logsfsUsedBytes > 17829888: mongodb (299.0)
+
+Number of Leaves  : 	5
+
+Size of the tree : 	9

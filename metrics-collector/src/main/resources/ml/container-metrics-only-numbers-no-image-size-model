@@ -1,0 +1,15 @@
+J48 pruned tree
+------------------
+
+ioServiceRecursiveWrite <= 2
+|   rootfsUsedBytes <= 61440: apache (99.0)
+|   rootfsUsedBytes > 61440: nginx (495.0)
+ioServiceRecursiveWrite > 2
+|   rootfsUsedBytes <= 86016
+|   |   logsfsUsedBytes <= 17825792: mysql (348.0)
+|   |   logsfsUsedBytes > 17825792: mongodb (297.0)
+|   rootfsUsedBytes > 86016: postgresql (99.0)
+
+Number of Leaves  : 	5
+
+Size of the tree : 	9

@@ -1,0 +1,15 @@
+J48 pruned tree
+------------------
+
+imageSizeBytes <= 260864226
+|   imageSizeBytes <= 133122553: nginx (495.0)
+|   imageSizeBytes > 133122553
+|   |   rootfsUsedBytes <= 86016: apache (99.0)
+|   |   rootfsUsedBytes > 86016: postgresql (99.0)
+imageSizeBytes > 260864226
+|   logsfsUsedBytes <= 17825792: mysql (348.0)
+|   logsfsUsedBytes > 17825792: mongodb (297.0)
+
+Number of Leaves  : 	5
+
+Size of the tree : 	9
