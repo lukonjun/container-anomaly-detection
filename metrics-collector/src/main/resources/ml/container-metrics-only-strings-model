@@ -2,15 +2,15 @@ J48 pruned tree
 ------------------
 
 containerName <= 104382626
-|   podName <= 104760218: mysql (260.0)
+|   podName <= 104760218: mysql (149.0)
 |   podName > 104760218
-|   |   podName <= 959035860: postgresql (100.0)
-|   |   podName > 959035860: apache (100.0)
+|   |   podName <= 959035860: postgresql (60.0)
+|   |   podName > 959035860: apache (60.0)
 containerName > 104382626
-|   containerName <= 104760218: nginx (495.0)
+|   containerName <= 104760218: nginx (299.0)
 |   containerName > 104760218
-|   |   containerName <= 1253323394: mongodb (299.0)
-|   |   containerName > 1253323394: mysql (100.0)
+|   |   containerName <= 1253323394: mongodb (178.0)
+|   |   containerName > 1253323394: mysql (60.0)
 
 Number of Leaves  : 	6
 

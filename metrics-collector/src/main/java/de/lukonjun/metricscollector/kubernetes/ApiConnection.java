@@ -26,6 +26,9 @@ public class ApiConnection {
     public ApiConnectionPojo createConnection() throws IOException {
         ApiConnectionPojo apiConnectionPojo = new ApiConnectionPojo();
         if(connectFromOutside){
+
+            logger.debug("Connect to the Kubernetes Api from outside of the Cluster");
+
             // file path to your KubeConfig
             String kubeConfigPath = System.getenv("HOME") + "/.kube/config";
 
@@ -42,6 +45,9 @@ public class ApiConnection {
             apiConnectionPojo.setApi(api);
             apiConnectionPojo.setClient(client);
         }else{
+
+            logger.debug("Connect to the Kubernetes Api from the inside of the Cluster");
+
             // loading the in-cluster config, including:
             //   1. service-account CA
             //   2. service-account bearer-token

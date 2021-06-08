@@ -4,7 +4,7 @@ import io.kubernetes.client.proto.Meta;
 
 import java.time.Instant;
 
-public class Metrics2 {
+public class Metrics {
 
     public static final String [] variableNames = {"label","cpuUsageNanocores","memoryUsageBytes"};
 

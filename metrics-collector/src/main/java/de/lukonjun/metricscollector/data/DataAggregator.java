@@ -11,6 +11,7 @@ import io.kubernetes.client.openapi.ApiException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import weka.classifiers.trees.J48;
@@ -19,10 +20,7 @@ import weka.core.Instance;
 import weka.core.Instances;
 import weka.core.converters.ArffSaver;
 
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.PrintWriter;
+import java.io.*;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -42,173 +40,68 @@ public class DataAggregator {
     @Autowired
     InfluxController influxController;
 
+    @Value("${data.aggregator.decision.tree.metrics.interval.seconds:120}")
+    private int fetchMetricsInterval;
+
+    @Value("#{'${data.aggregator.decision.tree.labels.list}'.split(',')}")
+    private List<String> labels;
+
     Logger logger = LoggerFactory.getLogger(DataAggregator.class);
 
-    public List<Metrics2> collect(List<ContainerPojo> containerPojoList) throws IOException, ApiException, InterruptedException {
-
-        String collectionInterval = "60s";
-        //WHERE time > now() -5m
-
-        // Connect to the Kubernetes Api
-        ApiConnection.ApiConnectionPojo a = apiConnection.createConnection();
-
-        // Get a List of Metrics already including {PodName,ContainerName,Image,ImageSizeBytes}
-        List<Metrics2> metricsPojoList = podController.fillMetrics2(a.getClient(),a.getApi());
-
-        //filter only relevant pods
-        metricsPojoList = filterRelevantPods(containerPojoList, metricsPojoList);
-
-        // Connect to influxdb
-        metricsPojoList.forEach(m ->{
-            // kubernetes_pod_container
-            String query = "SELECT * FROM kubernetes_pod_container WHERE container_name =\'" + m.getContainerName() +"\' AND pod_name =\'" + m.getPodName() + "\' Limit 1";
-            //System.out.print(query);
-            List<KubernetesPodContainer> list = influxController.selectFromKubernetesPodContainer(query);
-            KubernetesPodContainer k = list.get(0);
-            m.setTime(k.getTime());
-            m.setNamespace(k.getNamespace());
-            m.setMemoryUsageBytes(k.getMemoryUsageBytes());
-            m.setCpuUsageNanocores(k.getCpuUsageNanocores());
-            m.setLogsfsUsedBytes(k.getLogsfsUsedBytes());
-            m.setRootfsUsedBytes(k.getRootfsUsedBytes());
-        });
-
-        metricsPojoList.forEach(m ->{
-            // kubernetes_pod_network
-            String query = "SELECT * FROM kubernetes_pod_network WHERE pod_name =\'" + m.getPodName() + "\' Limit 1";
-            //System.out.print(query);
-            List<KubernetesPodNetwork> list = influxController.selectFromKubernetesPodNetwork(query);
-            KubernetesPodNetwork k = list.get(0);
-            m.setRx_bytes(k.getRxBytes());
-            m.setTx_bytes(k.getTxBytes());
-        });
-
-        metricsPojoList.forEach(m ->{
-            // kubernetes_pod_volume
-            String query = "SELECT * FROM kubernetes_pod_volume WHERE pod_name =\'" + m.getPodName() + "\' Limit 1";
-            //System.out.print(query);
-            List<KubernetesPodVolume> list = influxController.selectFromKubernetesPodVolume(query);
-            KubernetesPodVolume k = list.get(0);
-            m.setUsedBytesVolume(k.getUsedBytes());
-        });
-
-        metricsPojoList.forEach(m ->{
-            // docker_container_blkio
-            //String query = "SELECT * FROM docker_container_blkio WHERE io.kubernetes.container.name =\'" + m.getContainerName() +"\' AND io.kubernetes.pod.name =\'" + m.getPodName() + "\' Limit 1";
-            String query = "SELECT * FROM docker_container_blkio LIMIT 10";
-            //System.out.print(query);
-            List<DockerContainerBlkio> list = influxController.selectDockerContainerBlkio(query);
-            DockerContainerBlkio k = list.get(0);
-            m.setIoServiceRecursiveRead(k.getIoServiceRecursiveRead());
-            m.setIoServiceRecursiveWrite(k.getIoServiceRecursiveWrite());
-        });
-
-        // Running Time
-        // actual time - creationTimestamp": "2021-05-21T09:08:27Z"
-        metricsPojoList.forEach(m ->{
-            Instant startTime = null; // m.getStartTime();
-            Instant currentTime = m.getTime();
-            //https://stackoverflow.com/questions/55779996/calculate-days-hours-and-minutes-between-two-instants
-            // Or use Duration
-            Duration duration = Duration.between(currentTime, startTime);
-            System.out.println(duration);
-            System.out.println(m.getPodName() +" is running for seconds: " + duration.toSeconds());    // prints: 65
-
-            m.setRunningTimeSeconds((int)duration.toSeconds());
-            System.out.println(m.getPodName() +" running time is " + duration);
-        });
-
-        logger.info("Fetched metrics for " + metricsPojoList.size() + " containers");
-
-        return metricsPojoList;
-    }
-
-    private List<Metrics2> filterRelevantPods(List<ContainerPojo> containerPojoList, List<Metrics2> metricsPojoList) {
-
-        List<Metrics2> filteredMetricsList = new ArrayList<>();
-        boolean foundMatch = false;
-        for (Metrics2 m:metricsPojoList) {
-            foundMatch = false;
-            for(ContainerPojo c:containerPojoList){
-                if (m.getPodName().equals(c.getPodName()) && m.getImageName().equals(c.getContainerName()) && m.getNamespace().equals(c.getNamespace())) {
-                    filteredMetricsList.add(m);
-                    m.setLabel(c.getLabel());
-                    foundMatch = true;
-                    //System.out.print("Found Match " + c.getPodName() + " " + c.getContainerName() + " " + c.getNamespace());
-                    break;
-                }
-
-            }
-            if(!foundMatch){
-                //System.out.println("Found no Match for" + m.getPodName());
-            }
-        }
-
-        return filteredMetricsList;
-    }
-
-    public List<Metrics2> getMetrics(int repetitions, List<String> labels) throws Exception {
-
-        // Search for containers that match the labels
-        List<ContainerPojo> containerPojoList = new ArrayList<>();
-        List<Metrics2> metricsPojoList = podController.collectPodMetrics(labels);
-        logger.info("Found " + metricsPojoList.size() + " Containers that match the labels " + labels.toString());
-        // TODO DO we even need this?, as we alreday filter at a different place for the labels
-        labels.forEach(label -> {
-            for(Metrics2 m:metricsPojoList){
-                if(m.getPodName().contains(label)&&m.getContainerName().contains(label)){
-                    ContainerPojo c = new ContainerPojo();
-                    c.setPodName(m.getPodName());
-                    c.setContainerName(m.getContainerName());
-                    c.setNamespace(m.getNamespace());
-                    c.setLabel(label);
-                    containerPojoList.add(c);
-                }
-            }
-        });
-
-        // Collect Data for x min
-        int seconds = 10;
-        List<Metrics2> listMetrics2s = new ArrayList<>();
-        for(int i = 0; i < repetitions; i++){
-            // Metrics need to be filtered in collect
-            listMetrics2s.addAll(collect(containerPojoList));
-            if(i != repetitions - 1) {
-                logger.info("Sleeping for " + seconds);
-                TimeUnit.SECONDS.sleep(seconds);
-            }
-            logger.info("Finished " + (i + 1) + " iteration");
-        }
-        logger.info("Successfully fetched " + listMetrics2s.size() + " metric points");
-
-        // Train Model or write to a File
-
-        return listMetrics2s;
-
-    }
-
-    @Scheduled(fixedRateString = "${influxdb.metrics.collection.rate:10000}")
+    @Scheduled(fixedRateString = "${data.aggregator.decision.tree:10000}")
     public void decisionTree() throws Exception {
 
-        // How often to fetched Metrics, sleeps for 10 seconds between each iteration
-        int fetchMetricsInterval = 1000;
-        // Which labels should match when collecting container Metrics
-        List<String> labels = new ArrayList<>();
-        labels.add("mysql");
-        labels.add("nginx");
-        labels.add("mongodb");
-        labels.add("postgresql");
-        labels.add("apache");
-
         logger.info("Fetching Metrics for Containers with the name " + labels.toString() +  " for " + fetchMetricsInterval+ " Iterations");
-        List<Metrics2> metrics2List = getMetricsTimeInterval(fetchMetricsInterval, labels);
-
-        // Write File with custom method to container_metrics.arff
-        // J48 modelFromFile = new CreateFile().testDataSet();
+        List<Metrics> metricsList = getMetricsTimeInterval(this.fetchMetricsInterval, this.labels);
 
         // Create Trainings Sample
+        List<Sample> trainingSamples = createSample(metricsList);
+        logger.info("Generate Training Sample of size " + trainingSamples.size());
+
+
+        // Create Filter
+        // podName,"namespace","memoryUsageBytes","cpuUsageNanocores","logsfsUsedBytes","rootfsUsedBytes","imageSizeBytes", "image", "containerName","rx_bytes","tx_bytes", "ioServiceRecursiveRead", "ioServiceRecursiveWrite","usedBytesVolume","runningTimeSeconds"
+        List<MetricsFilter> filterList = new ArrayList<>();
+        filterList.add(new MetricsFilter(null,"all"));
+        filterList.add(new MetricsFilter(new boolean[]{true,true,false,false,false,false,false,true,true,false,false,false,false,false,false},"only-strings"));
+        filterList.add(new MetricsFilter(new boolean[]{false,false,true,true,true,true,true,false,false,true,true,true,true,true,true}, "only-numbers"));
+        filterList.add(new MetricsFilter(new boolean[]{false,false,true,true,true,true,false,false,false,true,true,true,true,true,true}, "only-numbers-no-image-size"));
+        String path = "/Users/lucasstocksmeier/Coding/container-anomaly-detection/metrics-collector/src/main/resources/ml/container-metrics-";
+
+        J48AnomalyDetector j48AnomalyDetector = new J48AnomalyDetector();
+
+        for(MetricsFilter filter:filterList) {
+
+            Instances instancesWithFilter = j48AnomalyDetector.createDatasetWithFilter(trainingSamples, filter.getFilter());
+            j48AnomalyDetector.fillDatasetWithFilter(instancesWithFilter, trainingSamples, filter.getFilter());
+
+            // Write to File
+            de.lukonjun.metricscollector.helper.FileWriter.writeArffFile(instancesWithFilter,path,filter.getName());
+
+            // Train weka model
+            J48 wekaModel = new J48();
+            wekaModel.buildClassifier(instancesWithFilter);
+
+            System.out.println("Decision Tree");
+            System.out.println(wekaModel.toString());
+            DataAggregator.writeToFile(wekaModel.toString(),path + filter.getName() + "-model");
+            logger.info("Test our created Model");
+            double[] values = new double[]{
+                    -2045226423, -1594835516, 8769536, 0, 32768, 65536, 132899597, -1866261913, 104760218, 998, 42, 256, 0, 0, 129744
+            };
+
+            // Add another Instance for Testing
+            Instance instance = new DenseInstance(1.0, values);
+            instance.setDataset(instancesWithFilter);
+            String label = j48AnomalyDetector.inputInstanceIntoModel(wekaModel, instance);
+            assert "nginx".equals(label) : "Label is not the same";
+            System.out.println("Nginx Pod get recognized by the model as: " + label);
+        }
+    }
+
+    private List<Sample> createSample(List<Metrics> metricsList) {
         List<Sample> trainingSamples = new ArrayList<>();
-        metrics2List.forEach(m -> {
+        metricsList.forEach(m -> {
             Sample s = new Sample();
             trainingSamples.add(s);
             // podName,"namespace","memoryUsageBytes","cpuUsageNanocores",
@@ -224,95 +117,24 @@ public class DataAggregator {
             s.setMetricsArray(metricsArray);
             s.setLabel(m.getLabel());
         });
-        logger.info("Generate Training Sample of size " + trainingSamples.size());
-
-        J48AnomalyDetector j48AnomalyDetector = new J48AnomalyDetector();
-
-        // Init weka model
-        //Instances instances = j48AnomalyDetector.createDataset(trainingSamples);
-        //j48AnomalyDetector.fillDataset(instances, trainingSamples);
-        // podName,"namespace","memoryUsageBytes","cpuUsageNanocores","logsfsUsedBytes","rootfsUsedBytes","imageSizeBytes", "image", "containerName","rx_bytes","tx_bytes", "ioServiceRecursiveRead", "ioServiceRecursiveWrite","usedBytesVolume","runningTimeSeconds"
-        List<boolean[]> filterList = new ArrayList<>();
-        filterList.add(null);
-        boolean [] onlyStrings = new boolean[]{true,true,false,false,false,false,false,true,true,false,false,false,false,false,false};
-        filterList.add(onlyStrings);
-        boolean [] onlyNumbers = new boolean[]{false,false,true,true,true,true,true,false,false,true,true,true,true,true,true};
-        filterList.add(onlyNumbers);
-        for(boolean[] filter:filterList) {
-
-            Instances instancesWithFilter = j48AnomalyDetector.createDatasetWithFilter(trainingSamples, filter);
-            j48AnomalyDetector.fillDatasetWithFilter(instancesWithFilter, trainingSamples, filter);
-
-            // write to file for comparison
-            // From https://waikato.github.io/weka-wiki/formats_and_processing/save_instances_to_arff/
-            String fileName = "";
-            if(filter != null) {
-                fileName = filter.getClass().getName();
-                logger.info(filter.getClass().getName());
-            } else {
-                fileName = "";
-            }
-            String absolutePath = "/Users/lucasstocksmeier/Coding/container-anomaly-detection/metrics-collector/src/main/resources/ml/container_metrics_" + fileName + ".arff";
-            ArffSaver saver = new ArffSaver();
-            saver.setInstances(instancesWithFilter);
-            saver.setFile(new File(absolutePath));
-            saver.writeBatch();
-            logger.info("Write Test Sample in arff Format to File " + absolutePath);
-
-            // Train weka model
-            J48 wekaModel = new J48();
-
-            // Custom Options
-        /*
-        String[] options = new String[4];
-        options[0] = "-C";
-        options[1] = "0.1";
-        options[2] = "-M";
-        options[3] = "2";
-        wekaModel.setOptions(options);
-        */
-
-            wekaModel.buildClassifier(instancesWithFilter);
-
-            System.out.println("Decision Tree");
-            System.out.println(wekaModel.toString());
-
-            logger.info("Test our created Model");
-            double[] values = new double[]{
-                    -2045226423, -1594835516, 8769536, 0, 32768, 65536, 132899597, -1866261913, 104760218, 998, 42, 256, 0, 0, 129744
-            };
-            Instance instance = new DenseInstance(1.0, values);
-            instance.setDataset(instancesWithFilter);
-            String label = j48AnomalyDetector.inputInstanceIntoModel(wekaModel, instance);
-            System.out.println("Nginx Pod get recognized by the model as: " + label);
-        }
+        return trainingSamples;
     }
 
-    //@Scheduled(fixedRateString = "1000")
-    public void start() throws Exception {
-        int seconds = 100;
+    public static void writeToFile(String str, String filePath) throws IOException{
+        BufferedWriter writer = new BufferedWriter(new FileWriter(filePath));
+        writer.write(str);
 
-        List<String> labels = new ArrayList<>();
-        labels.add("mysql");
-        labels.add("nginx");
-        labels.add("mongodb");
-        labels.add("postgresql");
-        labels.add("apache");
-
-        List<Metrics2> metrics2List = getMetricsTimeInterval(seconds,labels);
-
-        logger.info("Generated List with Metircs of the last " + seconds + " seconds and a size of " + metrics2List.size() + " entries");
-
+        writer.close();
     }
 
-    public List<Metrics2> getMetricsTimeInterval(int seconds, List<String> labels) throws Exception {
+    public List<Metrics> getMetricsTimeInterval(int seconds, List<String> labels) throws Exception {
 
-        List<Metrics2> listMetrics = new ArrayList<>();
-        List<Metrics2> listMetricsDynamic = new ArrayList<>();
+        List<Metrics> listMetrics = new ArrayList<>();
+        List<Metrics> listMetricsDynamic;
         // Get Pod Metrics that dont change over time
-        List<Metrics2> listMetricsStable = collectStableMetrics(labels);
+        List<Metrics> listMetricsStable = collectStableMetrics(labels);
 
-        for(Metrics2 m:listMetricsStable){
+        for(Metrics m:listMetricsStable){
             listMetricsDynamic = collectDynamicMetrics(seconds,m);
             listMetrics.addAll(listMetricsDynamic);
         }
@@ -321,22 +143,14 @@ public class DataAggregator {
         return listMetrics;
     }
 
-    private Set<String> setOfPodUids(List<Metrics2> metrics2List){
-        Set<String>  setPodUids = new HashSet<>();
-        for(Metrics2 m:metrics2List){
-            setPodUids.add(m.getPodUid());
-        }
-        return setPodUids;
-    }
+    private List<Metrics> collectDynamicMetrics(int seconds, Metrics m) throws Exception {
 
-    private List<Metrics2> collectDynamicMetrics(int seconds, Metrics2 m) throws Exception {
+        List<Metrics> dynamicMetrics = new ArrayList<>();
 
-        List<Metrics2> dynamicMetrics = new ArrayList<>();
-
-        List<Metrics2> dockerContainerBlkioMetrics = influxController.getMetricsFromDockerContainerBlkio(seconds,m);
-        List<Metrics2> kubernetesPodContainerMetrics = influxController.getMetricsFromKubernetesPodContainer(seconds,m);
-        List<Metrics2> kubernetesPodNetworkMetrics = influxController.getMetricsFromKubernetesPodNetwork(seconds,m);
-        List<Metrics2> kubernetesPodVolumeMetrics = influxController.getMetricsFromKubernetesPodVolume(seconds,m);
+        List<Metrics> dockerContainerBlkioMetrics = influxController.getMetricsFromDockerContainerBlkio(seconds,m);
+        List<Metrics> kubernetesPodContainerMetrics = influxController.getMetricsFromKubernetesPodContainer(seconds,m);
+        List<Metrics> kubernetesPodNetworkMetrics = influxController.getMetricsFromKubernetesPodNetwork(seconds,m);
+        List<Metrics> kubernetesPodVolumeMetrics = influxController.getMetricsFromKubernetesPodVolume(seconds,m);
 
         // get size of smallest list
         int sizeList1 = kubernetesPodNetworkMetrics.size() < kubernetesPodVolumeMetrics.size() ? kubernetesPodNetworkMetrics.size() : kubernetesPodVolumeMetrics.size();
@@ -344,11 +158,11 @@ public class DataAggregator {
         int sizeList = sizeList1 < sizeList2 ? sizeList1 : sizeList2;
 
         for(int i = 0; i < sizeList; i++){
-            Metrics2 blkio = dockerContainerBlkioMetrics.get(i);
-            Metrics2 podMetrics = kubernetesPodContainerMetrics.get(i);
-            Metrics2 podNetwork = kubernetesPodNetworkMetrics.get(i);
-            //Metrics2 podVolume = kubernetesPodVolumeMetrics.get(i);
-            Metrics2 newMetricPoint = new Metrics2();
+            Metrics blkio = dockerContainerBlkioMetrics.get(i);
+            Metrics podMetrics = kubernetesPodContainerMetrics.get(i);
+            Metrics podNetwork = kubernetesPodNetworkMetrics.get(i);
+            //Metrics2 podVolume = kubernetesPodVolumeMetrics.get(i); TODO Implement Pod Volume
+            Metrics newMetricPoint = new Metrics();
             // Metric
             newMetricPoint.setLabel(m.getLabel());
             newMetricPoint.setPodUid(m.getPodUid());
@@ -377,41 +191,14 @@ public class DataAggregator {
             newMetricPoint.setRx_bytes(podNetwork.getRx_bytes());
             // podVolume
             //newMetricPoint.setUsedBytesVolume(podVolume.getUsedBytesVolume());
-            logger.info("blkio time: " + blkio.getTime() + "podMetrics time: " + podMetrics.getTime()+ " podNetwork: " + podNetwork.getTime() + " podVolume: not defined atm");
+            logger.debug("blkio time: " + blkio.getTime() + " podMetrics time: " + podMetrics.getTime()+ " podNetwork: " + podNetwork.getTime() + " podVolume: not defined atm");
         }
 
         return dynamicMetrics;
     }
 
-    private List<Metrics2> collectStableMetrics(List<String> labels) throws Exception {
+    private List<Metrics> collectStableMetrics(List<String> labels) throws Exception {
         return podController.collectPodMetrics(labels);
-    }
-
-    public void writingToFile(List<Metrics2> metrics2List) throws InterruptedException, ApiException, IOException {
-
-        String absolutePath = "/Users/lucasstocksmeier/Coding/container-anomaly-detection/metrics-collector/src/main/resources/ml/container_metrics.arff";
-        File file = new File(absolutePath);
-
-        FileWriter fileWriter = new FileWriter(file);
-        PrintWriter printWriter = new PrintWriter(fileWriter);
-        printWriter.println("@relation container_metrics");
-        printWriter.println("");
-        printWriter.println("@attribute runningTimeSeconds numeric");
-        printWriter.println("@attribute imageSizeBytes numeric");
-        printWriter.println("@attribute cpuUsageNanocores numeric");
-        printWriter.println("@attribute memoryUsageBytes numeric");
-        printWriter.println("@attribute label {mysql, nginx, mongodb, postgresql, apache}");
-        printWriter.println("");
-        printWriter.println("@data");
-
-        metrics2List.forEach(m ->{
-            // pod_name runningTimeSeconds imageSizeBytes cpuUsageNanocores memoryUsageBytes label
-            printWriter.println(m.getRunningTimeSeconds() + "," + m.getImageSizeBytes() + "," +
-                    m.getCpuUsageNanocores() + "," + m.getMemoryUsageBytes() + "," + m.getLabel());
-        });
-
-        printWriter.close();
-        System.out.println("Absolute Path of File " + file.getAbsolutePath());
     }
 
 }

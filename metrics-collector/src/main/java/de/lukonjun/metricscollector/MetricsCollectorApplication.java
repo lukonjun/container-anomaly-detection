@@ -9,9 +9,7 @@ import java.io.IOException;
 @SpringBootApplication
 public class MetricsCollectorApplication {
 
-	Logger logger = LoggerFactory.getLogger(MetricsCollectorApplication.class);
-
-	public static void main(String[] args) throws IOException, ApiException, InterruptedException {
+	public static void main(String[] args) {
 		SpringApplication.run(MetricsCollectorApplication.class, args);
 	}
 }
