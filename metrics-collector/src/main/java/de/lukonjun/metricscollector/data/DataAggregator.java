@@ -48,11 +48,41 @@ public class DataAggregator {
 
     Logger logger = LoggerFactory.getLogger(DataAggregator.class);
 
-    @Scheduled(fixedRateString = "${data.aggregator.decision.tree:10000}")
+    public void generateTrainingSet(float ratioTrainingValidation, ArrayList<Sample> trainingList, ArrayList<Sample> validationList) throws Exception {
+        logger.info("Fetching Metrics for Containers with the name " + labels.toString() +  " for the last " + fetchMetricsInterval+ " seconds");
+        List<Metrics> metricsList = getMetricsTimeInterval(this.fetchMetricsInterval, this.labels, false);
+        List<Sample> trainingSamples = createSample(metricsList);
+
+        for(Sample s:trainingSamples){
+            Random rand = new Random();
+            float f = rand.nextFloat();
+            if(f <= ratioTrainingValidation){
+                trainingList.add(s);
+            }else{
+                validationList.add(s);
+            }
+        }
+
+        logger.info("Size of Training List " + trainingList.size() + ", ratio: " + (float)trainingList.size()/((float)validationList.size()+(float)trainingList.size()));
+        logger.info("Size of validation List " + validationList.size() + ", ratio: " + (float)validationList.size()/((float)validationList.size()+(float)trainingList.size()));
+    }
+
+    public J48 trainModel(MetricsFilter metricsFilter, ArrayList<Sample> trainingList) throws Exception {
+        J48AnomalyDetector j48AnomalyDetector = new J48AnomalyDetector();
+        Instances instancesWithFilter = j48AnomalyDetector.createDatasetWithFilter(trainingList, metricsFilter.getFilter());
+        j48AnomalyDetector.fillDatasetWithFilter(instancesWithFilter,trainingList, metricsFilter.getFilter());
+
+        // Train weka model
+        J48 wekaModel = new J48();
+        wekaModel.buildClassifier(instancesWithFilter);
+        return wekaModel;
+    }
+
+    //@Scheduled(fixedRateString = "${data.aggregator.decision.tree:10000}")
     public void decisionTree() throws Exception {
 
-        logger.info("Fetching Metrics for Containers with the name " + labels.toString() +  " for " + fetchMetricsInterval+ " Iterations");
-        List<Metrics> metricsList = getMetricsTimeInterval(this.fetchMetricsInterval, this.labels);
+        logger.info("Fetching Metrics for Containers with the name " + labels.toString() +  " for the last " + fetchMetricsInterval+ " seconds");
+        List<Metrics> metricsList = getMetricsTimeInterval(this.fetchMetricsInterval, this.labels, false);
 
         // Create Trainings Sample
         List<Sample> trainingSamples = createSample(metricsList);
@@ -84,22 +114,34 @@ public class DataAggregator {
 
             System.out.println("Decision Tree");
             System.out.println(wekaModel.toString());
-            DataAggregator.writeToFile(wekaModel.toString(),path + filter.getName() + "-model");
+            de.lukonjun.metricscollector.helper.FileWriter.writeToFile(wekaModel.toString(),path + filter.getName() + "-model");
             logger.info("Test our created Model");
             double[] values = new double[]{
                     -2045226423, -1594835516, 8769536, 0, 32768, 65536, 132899597, -1866261913, 104760218, 998, 42, 256, 0, 0, 129744
             };
 
-            // Add another Instance for Testing
-            Instance instance = new DenseInstance(1.0, values);
-            instance.setDataset(instancesWithFilter);
-            String label = j48AnomalyDetector.inputInstanceIntoModel(wekaModel, instance);
-            assert "nginx".equals(label) : "Label is not the same";
-            System.out.println("Nginx Pod get recognized by the model as: " + label);
+            //assert j48AnomalyDetector.validateModel(wekaModel,values, instancesWithFilter,filter.getFilter()) == "nginx" : "Label is not the same";
+            //logger.info(j48AnomalyDetector.validateModel(wekaModel,values, instancesWithFilter,filter.getFilter()));
         }
     }
 
-    private List<Sample> createSample(List<Metrics> metricsList) {
+    public boolean validate(Sample sample, J48 wekaModel, boolean[] filter) throws Exception {
+        J48AnomalyDetector j48AnomalyDetector = new J48AnomalyDetector();
+        String sampleLabel = sample.getLabel();
+        String validationLabel = j48AnomalyDetector.validateModel(wekaModel, sample,filter);
+        logger.debug("sampleLabel: " + sampleLabel + " validationLabel: " + validationLabel);
+        return sampleLabel.equals(validationLabel);
+    }
+
+    public String validateReturnString(Sample sample, J48 wekaModel, boolean[] filter) throws Exception {
+        J48AnomalyDetector j48AnomalyDetector = new J48AnomalyDetector();
+        String sampleLabel = sample.getLabel();
+        String validationLabel = j48AnomalyDetector.validateModel(wekaModel, sample,filter);
+        logger.debug("sampleLabel: " + sampleLabel + " validationLabel: " + validationLabel);
+        return validationLabel;
+    }
+
+    public List<Sample> createSample(List<Metrics> metricsList) {
         List<Sample> trainingSamples = new ArrayList<>();
         metricsList.forEach(m -> {
             Sample s = new Sample();
@@ -108,11 +150,20 @@ public class DataAggregator {
             // "logsfsUsedBytes","rootfsUsedBytes","imageSizeBytes", "image"
             // "containerName","rx_bytes","tx_bytes", "ioServiceRecursiveRead",
             // "ioServiceRecursiveWrite","usedBytesVolume","runningTimeSeconds"
+            // TODO Workaround to java.lang.NullPointerException: Cannot invoke "java.lang.Long.longValue()" because the return value of "de.lukonjun.metricscollector.model.Metrics.getIoServiceRecursiveRead()" is null
+            double recursiveRead = 0.0;
+            if(m.getIoServiceRecursiveRead() != null){
+                recursiveRead = m.getIoServiceRecursiveRead();
+            }
+            double recursiveWrite = 0.0;
+            if(m.getIoServiceRecursiveWrite() != null){
+                recursiveWrite = m.getIoServiceRecursiveRead();
+            }
             double [] metricsArray = {
                     m.getPodName().hashCode(),m.getNamespace().hashCode(),m.getMemoryUsageBytes(),m.getCpuUsageNanocores(),
                     m.getLogsfsUsedBytes(), m.getRootfsUsedBytes(), m.getImageSizeBytes(), m.getImageName().hashCode(),
-                    m.getContainerName().hashCode(), m.getRx_bytes(), m.getTx_bytes(), m.getIoServiceRecursiveRead(),
-                    m.getIoServiceRecursiveWrite(), 0, m.getRunningTimeSeconds()
+                    m.getContainerName().hashCode(), m.getRx_bytes(), m.getTx_bytes(), recursiveRead,
+                    recursiveWrite, 0, m.getRunningTimeSeconds()
             };
             s.setMetricsArray(metricsArray);
             s.setLabel(m.getLabel());
@@ -127,12 +178,12 @@ public class DataAggregator {
         writer.close();
     }
 
-    public List<Metrics> getMetricsTimeInterval(int seconds, List<String> labels) throws Exception {
+    public List<Metrics> getMetricsTimeInterval(int seconds, List<String> labels, boolean ignoreLabelForContainers) throws Exception {
 
         List<Metrics> listMetrics = new ArrayList<>();
         List<Metrics> listMetricsDynamic;
         // Get Pod Metrics that dont change over time
-        List<Metrics> listMetricsStable = collectStableMetrics(labels);
+        List<Metrics> listMetricsStable = collectStableMetrics(labels, ignoreLabelForContainers);
 
         for(Metrics m:listMetricsStable){
             listMetricsDynamic = collectDynamicMetrics(seconds,m);
@@ -197,8 +248,8 @@ public class DataAggregator {
         return dynamicMetrics;
     }
 
-    private List<Metrics> collectStableMetrics(List<String> labels) throws Exception {
-        return podController.collectPodMetrics(labels);
+    private List<Metrics> collectStableMetrics(List<String> labels, boolean ignoreLabelForContainers) throws Exception {
+        return podController.collectPodMetrics(labels, ignoreLabelForContainers);
     }
 
 }

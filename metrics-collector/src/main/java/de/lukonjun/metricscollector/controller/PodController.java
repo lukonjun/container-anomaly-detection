@@ -1,6 +1,10 @@
 package de.lukonjun.metricscollector.controller;
 
+import de.lukonjun.metricscollector.data.DataAggregator;
 import de.lukonjun.metricscollector.kubernetes.ApiConnection;
+import de.lukonjun.metricscollector.ml.J48AnomalyDetector;
+import de.lukonjun.metricscollector.ml.LoadModel;
+import de.lukonjun.metricscollector.ml.Sample;
 import de.lukonjun.metricscollector.model.Metrics;
 import de.lukonjun.metricscollector.pojo.ContainerImageInfoPojo;
 import io.kubernetes.client.ProtoClient;
@@ -18,34 +22,136 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.EnableScheduling;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Controller;
+import weka.classifiers.trees.J48;
+import weka.core.Instances;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 
 @Controller
 @EnableScheduling
 public class PodController {
 
+    private final static List<String> POD_LIST = new ArrayList<>();
+
+    private static boolean startUp = true;
+
     Logger logger = LoggerFactory.getLogger(PodController.class);
 
     @Autowired
     ApiConnection apiConnection;
 
-    public List<Metrics> collectPodMetrics(List<String> labels) throws Exception {
+    @Autowired
+    LoadModel loadModel;
+
+    @Autowired
+    DataAggregator dataAggregator;
+
+    // Example from https://github.com/kubernetes-client/java/blob/master/examples/examples-release-12/src/main/java/io/kubernetes/client/examples/KubeConfigFileClientExample.java
+    //@Scheduled(fixedRateString = "${pod.controller.scheduling.rate:5000}")
+    private void watchPodsSpawn() throws Exception {
+
+        V1PodList list =
+                apiConnection.createConnection().getApi().listPodForAllNamespaces(null, null, null, null, null, null, null, null, null, null);
+        logger.info("watching pods");
+        // check for running Pods
+        for (V1Pod item : list.getItems()) {
+            String podName = item.getMetadata().getName();
+            if(!POD_LIST.contains(podName)){
+                POD_LIST.add(podName);
+                System.out.println("Pod " + podName + " spawned");
+                int timeIntervalSeconds = 120;
+                ArrayList<String> podNameList = new ArrayList<>();
+                podNameList.add(podName);
+                // Time is a Problem, might need to wait for atleast ten seconds till we get proper metrics
+                System.out.println("Fetching Metrics");
+                // TODO For the Start Up dont timeout
+                if(!startUp) TimeUnit.SECONDS.sleep(60);
+                // TODO Pods need to be in a running state, otherwise we should ignore them
+                // TODO REPEAT Till List is not of Size Zero anymore, try 12 Iteration with 10 sec break, afterwards throw error
+                List<Metrics> metricsList = dataAggregator.getMetricsTimeInterval(timeIntervalSeconds,podNameList, true); // get Metrics for Containers in Pod, one is enough
+                int count = 0;
+                /*
+                while (metricsList.size() == 0){
+                    if (count == 6)break;
+                    logger.info("iteration " + count);
+                    TimeUnit.SECONDS.sleep(10);
+                    metricsList = dataAggregator.getMetricsTimeInterval(timeIntervalSeconds,podNameList, true);
+                    count++;
+                }
+                 */
+                if(metricsList.size() == 0){
+                    logger.error("metricsList is of size zero, cant classify pod");
+                    continue;
+                }
+                // TODO Make sure we only have metrics for each unique container
+                List<Metrics> metricsList1 = new ArrayList<>();
+                metricsList1.add(metricsList.get(0));
+                List<Sample> trainingSamples = dataAggregator.createSample(metricsList1);
+
+                J48AnomalyDetector j48AnomalyDetector = new J48AnomalyDetector();
+                // Set Up Instances
+                // Instances instancesWithFilter = j48AnomalyDetector.createDatasetWithFilter(trainingSamples, null);
+                // j48AnomalyDetector.fillDatasetWithFilter(instancesWithFilter, trainingSamples, null);
+
+                // Validate against Model
+                boolean [] filterArray = new boolean[]{false,false,true,true,true,true,true,false,false,true,true,true,true,true,true};
+                String modelResult = j48AnomalyDetector.validateModel(loadModel.getWekaModel(), trainingSamples.get(0), filterArray);
+                System.out.println(podName + " got classified by the model as " + modelResult);
+
+                // Create Instance
+                // Classify all Containers
+                // Print out the Result
+            }
+        }
+        PodController.startUp = false;
+
+        // check for deleted pods
+        List<String> found = new ArrayList<String>();
+        for(String podName:POD_LIST){
+            if(!containsPod(podName,list)){
+                found.add(podName);
+            }
+        }
+
+        // delete pods
+        for(String podName:found) {
+            System.out.println("Pod " + podName + " is deleted");
+            POD_LIST.remove(podName);
+        }
+    }
+
+    /**
+     * Checks if a V1PodList contains a Pod with podName
+     * @param podName
+     * @param list
+     * @return
+     */
+    private boolean containsPod(String podName, V1PodList list){
+        ArrayList<String> listPodName = new ArrayList<>();
+        for (V1Pod item : list.getItems()) {
+            listPodName.add(item.getMetadata().getName());
+        }
+        return listPodName.contains(podName);
+    }
+
+    public List<Metrics> collectPodMetrics(List<String> labels, boolean ignoreLabelForContainers) throws Exception {
 
         // Connect to the Kubernetes Api
         ApiConnection.ApiConnectionPojo a = apiConnection.createConnection();
 
-        List<Metrics> metricsList = fillMetricsObject(a.getClient(), a.getApi(), labels);
+        List<Metrics> metricsList = fillMetricsObject(a.getClient(), a.getApi(), labels, ignoreLabelForContainers);
 
         return metricsList;
     }
 
-    private List<Metrics>fillMetricsObject(ApiClient client, CoreV1Api api, List<String> labels) throws Exception {
+    private List<Metrics>fillMetricsObject(ApiClient client, CoreV1Api api, List<String> labels, boolean ignoreLabelForContainers) throws Exception {
 
         // Define List for Metrics we return later
         List<Metrics> metricsList = new ArrayList<>();
@@ -65,7 +171,7 @@ public class PodController {
                     continue;
                 }
                 for(ContainerMetrics containerMetrics:podMetrics.getContainers()){
-                    if(containerContainsLabel(containerMetrics,labels)){
+                    if(containerContainsLabel(containerMetrics,labels )|| ignoreLabelForContainers){ // Problem maybe here, matching between name and container ????
                         ContainerImageInfoPojo containerInfo = findContainerImageInfo2(imageInfoList, pod, containerMetrics.getName());
                         Metrics m = new Metrics();
                         m.setLabel(podLabel);
@@ -84,6 +190,7 @@ public class PodController {
             }
         }
 
+        logger.debug(this.getClass().getName() + " Collected Metrics total " + metricsList.size());
         return metricsList;
     }
 

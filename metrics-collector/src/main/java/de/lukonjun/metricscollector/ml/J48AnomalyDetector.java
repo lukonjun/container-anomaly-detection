@@ -3,6 +3,8 @@ package de.lukonjun.metricscollector.ml;
 import de.lukonjun.metricscollector.data.DataAggregator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
 import weka.classifiers.trees.J48;
 import weka.core.Attribute;
 import weka.core.DenseInstance;
@@ -13,6 +15,7 @@ import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 
+@Component
 public class J48AnomalyDetector {
 
     Logger logger = LoggerFactory.getLogger(J48AnomalyDetector.class);
@@ -67,27 +70,48 @@ public class J48AnomalyDetector {
             double[] values = sample.getMetricsArray();
 
             values = Arrays.copyOf(values, values.length + 1);
-            if(filter != null){
-                int count = 0;
-                for(boolean b:filter){
-                    if(b == true) count++;
-                }
-                // + 1 for classifier
-                double [] filteredValues = new double[count +1];
-
-                int countArray = 0;
-                for(int i = 0; i < values.length - 1; i++){
-                    if(filter[i] == true){
-                        filteredValues[countArray] = values[i];
-                        countArray++;
-                    }
-                }
-                values = filteredValues;
-            }
+            values = applyFilter(values, filter);
             Instance instance = new DenseInstance(1.0, values);
             instance.setDataset(instances);
             instance.setClassValue((double) numberMapping.get(sample.getLabel()));
             instances.add(instance);
         }
+    }
+
+    public String validateModel(J48 wekaModel, Sample sample, boolean[] filter) throws Exception {
+
+        List<Sample> sampleList = new ArrayList<>();
+        sampleList.add(sample);
+        Instances instances = createDatasetWithFilter(sampleList,filter);
+        double values [] = sample.getMetricsArray();
+
+        values = Arrays.copyOf(values, values.length);
+
+        values = applyFilter(values, filter);
+
+        Instance instance = new DenseInstance(1.0, values);
+        instance.setDataset(instances);
+        return inputInstanceIntoModel(wekaModel,instance);
+    }
+
+    private double[] applyFilter(double[] values, boolean[] filter) {
+        if (filter != null) {
+            int count = 0;
+            for (boolean b : filter) {
+                if (b == true) count++;
+            }
+            // + 1 for classifier
+            double[] filteredValues = new double[count + 1];
+
+            int countArray = 0;
+            for (int i = 0; i < values.length - 1; i++) {
+                if (filter[i] == true) {
+                    filteredValues[countArray] = values[i];
+                    countArray++;
+                }
+            }
+            values = filteredValues;
+        }
+        return values;
     }
 }

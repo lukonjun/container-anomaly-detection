@@ -6,6 +6,7 @@ import org.slf4j.LoggerFactory;
 import weka.core.Instances;
 import weka.core.converters.ArffSaver;
 
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
 
@@ -21,6 +22,15 @@ public class FileWriter {
         saver.setFile(new File(absolutePath));
         saver.writeBatch();
         logger.info("Write .arff File " + path + filename + ".arff");
+    }
+
+    public static void writeToFile(String str, String filePath) throws IOException{
+
+        BufferedWriter writer = new BufferedWriter(new java.io.FileWriter(filePath));
+        writer.write(str);
+
+        writer.close();
+
     }
 
 }
