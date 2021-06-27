@@ -84,6 +84,8 @@ public class Training {
             logger.info("Total Count Correct Validation: " + countCorrectValidations);
             logger.info("--------------------------------------------------------------");
             logger.info("Confusion Matrix");
+            logger.info("--------------------------------------------------------------");
+            logger.info("y axis contains actual class (input), -> x axis contains predictions (output)");
             // {"mysql","nginx","mongodb","postgresql","apache"};
             // Using Short Array, max length is 6
             String[] shortNames = new String[] {"mysql","nginx","mongo","psql","apache"};
@@ -108,6 +110,124 @@ public class Training {
                 }
                 System.out.println("");
             }
+
+            performanceMeasurement(confMatrix);
+
         }
     }
+
+    private void performanceMeasurement(int[][] confMatrix) {
+
+        int totalDataset = calculateTotalDataset(confMatrix);
+        int numberCorrectPredictions = calculateNumberCorrectPredictions(confMatrix);
+        int truePositives [] = calculateTruePositives(confMatrix);
+        int falsePositives [] = calculateFalsePositives(confMatrix);
+        int falseNegative [] = calculatefalseNegative(confMatrix);
+
+        // Accuracy (works well on balanced data)
+        // correctly identified prediction for each class / total dataset
+        double accuracy = (double) numberCorrectPredictions / (double) totalDataset;
+
+        // Precision
+        // TP / (TP + FP)
+        // Execute above for each classifier, then average Precision
+        double [] precision = new double[5];
+        for (int i = 0; i < 5; i++) {
+                precision[i] = (double) truePositives[i] / (double)(truePositives[i]+falsePositives[i]);
+        }
+        double averagePrecision = getAverage(precision);
+
+        // Recall
+        // TP / (TP + FN)
+        double [] recall = new double[5];
+        for (int i = 0; i < 5; i++) {
+            recall[i] = (double)truePositives[i] / (double)(truePositives[i]+falseNegative[i]);
+        }
+        double averageRecall = getAverage(recall);
+
+        // F1 Score (Good Metric when the data is imbalanced)
+        // based on recall and precision
+        double f1Score = 2 * ((averagePrecision * averageRecall)/(averagePrecision + averageRecall));
+
+        System.out.println("Performance Measurements");
+        System.out.println("Accuracy for the Model is " + accuracy);
+        System.out.println("Average Precision for the Model is " + averagePrecision);
+        System.out.println("Average Recall for the Model is " + averageRecall);
+        System.out.println("F1 Score for the Model is " + f1Score);
+    }
+
+    private double getAverage(double[] precision) {
+        double sum = 0;
+        for (double value: precision) {
+            sum += value;
+        }
+        return sum / precision.length;
+    }
+
+    public static double findAverageWithoutUsingStream(double[] array) {
+        double sum = findSumWithoutUsingStream(array);
+        return (double) sum / array.length;
+    }
+
+    public static double findSumWithoutUsingStream(double[] array) {
+        int sum = 0;
+        for (double value : array) {
+            sum += value;
+        }
+        return sum;
+    }
+
+    private int[] calculatefalseNegative(int[][] confMatrix) {
+        int[] falseNegative = new int[5];
+        for (int i = 0; i < 5; i++) {
+            for (int j = 0; j < 5; j++) {
+                if(i != j) {
+                    falseNegative[i] += confMatrix[i][j];
+                }
+            }
+        }
+        return falseNegative;
+    }
+
+    private int[] calculateFalsePositives(int[][] confMatrix) {
+        int falsePositives [] = new int[5];
+        for (int i = 0; i < 5; i++) {
+            for (int j = 0; j < 5; j++) {
+                if(i != j) {
+                    falsePositives[i] += confMatrix[j][i];
+                }
+            }
+        }
+        return falsePositives;
+    }
+
+    private int[] calculateTruePositives(int[][] confMatrix) {
+        int truePositives []= new int[5];
+        for (int i = 0; i < 5; i++) {
+            truePositives[i]=confMatrix[i][i];
+        }
+        return truePositives;
+    }
+
+    private int calculateNumberCorrectPredictions(int[][] confMatrix) {
+        int numberCorrectPredictions = 0;
+        for (int i = 0; i < 5; i++) {
+            numberCorrectPredictions = numberCorrectPredictions + confMatrix[i][i];
+        }
+        return numberCorrectPredictions;
+    }
+
+    private int calculateTotalDataset(int[][] confMatrix) {
+
+        int totalDataset = 0;
+
+        for (int i = 0; i < 5; i++) {
+            for (int j = 0; j < 5; j++) {
+                totalDataset = totalDataset + confMatrix[i][j];
+            }
+        }
+
+        return totalDataset;
+    }
+
 }
