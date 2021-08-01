@@ -102,7 +102,8 @@ public class PodController {
 
                 // Validate against Model
                 boolean [] filterArray = new boolean[]{false,false,true,true,true,true,true,false,false,true,true,true,true,true,true};
-                String modelResult = j48AnomalyDetector.validateModel(loadModel.getWekaModel(), trainingSamples.get(0), filterArray, false);
+                // Need to add Serialized Model here loadModel.getWekaModel()
+                String modelResult = j48AnomalyDetector.validateModel(null, trainingSamples.get(0), filterArray, false);
                 System.out.println(podName + " got classified by the model as " + modelResult);
 
                 // Create Instance

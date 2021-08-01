@@ -2,7 +2,6 @@ package de.lukonjun.metricscollector.training;
 
 import de.lukonjun.metricscollector.data.DataAggregator;
 import de.lukonjun.metricscollector.ml.Sample;
-import de.lukonjun.metricscollector.model.Metrics;
 import de.lukonjun.metricscollector.model.MetricsFilter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
