@@ -1,6 +1,6 @@
 If not already done install helm
 ```bash
-https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3 | bash
+curl https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3 | bash
 ```
 Add the helm repo
 ```bash
