@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pod-watcher
+  namespace: anomaly-detection
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: pod-watcher
+  template:
+    metadata:
+      labels:
+        name: pod-watcher
+    spec:
+      serviceAccountName: pod-watcher
+      containers:
+        - env:
+            - name: kubernetes.connect.from.outside
+              value: "false"
+          image: ghcr.io/lukonjun/pod-watcher:lukonjun
+          name: pod-watcher-container
+          volumeMounts:
+          - name: config-volume
+            mountPath: /tmp
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsUser: 0
+          resources: {}
+      restartPolicy: Always
+  volumes:
+    - name: config-volume
+      configMap:
+        # Provide the name of the ConfigMap containing the files you want
+        # to add to the container
+        name: serialized-model
+        items:
+        - key: weka_model
+status: {}
