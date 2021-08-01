@@ -1,0 +1,43 @@
+name: Package Jar, build Image and push to Container Registry
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+    - pod-watcher/**
+  pull_request:
+    branches: [main]
+    paths:
+    - pod-watcher/**
+
+defaults:
+  run:
+    working-directory: ./metrics-collector
+
+jobs:
+  buildImage:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+      
+    - name: Set up JDK 1.14
+      uses: actions/setup-java@v1
+      with:
+        java-version: 1.14
+        
+    - name: Build jar with Maven
+      run: mvn clean install
+      
+    - name: Build Container Image
+      run: docker build --tag ghcr.io/lukonjun/pod-watcher:${{ github.run_id }} .
+      
+    - name: Login to GitHub Container Registry
+      run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login https://ghcr.io -u ${{ github.actor }} --password-stdin
+    
+    - name: Run docker push
+      run: docker push ghcr.io/lukonjun/pod-watcher:${{ github.run_id }}
+      
+    - name: Name of Image 
+      run: echo "ghcr.io/lukonjun/pod-watcher:${{ github.run_id }}"
