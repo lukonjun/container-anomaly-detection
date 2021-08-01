@@ -13,7 +13,7 @@ on:
 
 defaults:
   run:
-    working-directory: ./metrics-collector
+    working-directory: ./pod-watcher
 
 jobs:
   buildImage:
