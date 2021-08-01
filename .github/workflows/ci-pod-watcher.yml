@@ -35,7 +35,7 @@ jobs:
         java-version: 1.14
     - name: Build with Maven
       working-directory: ./pod-watcher
-      run: mvn -B package --file pom.xml
+      run: mvn -B package --file pom.xml -Dmaven.test.skip=true
     - name: GITHUB_SHA
       run: echo ${GITHUB_SHA}
     - name: Run docker build
