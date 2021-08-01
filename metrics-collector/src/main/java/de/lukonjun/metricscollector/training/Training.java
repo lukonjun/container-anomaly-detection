@@ -11,13 +11,46 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import weka.classifiers.trees.J48;
+import weka.core.Instances;
 
+import java.io.File;
+import java.io.IOException;
+import java.lang.reflect.Array;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
+
+import java.io.*;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
+import com.google.common.io.Files;
 
 @Component
 public class Training {
+
+    public class Plot {
+        private int x_instances;
+        private double y_accuracy;
+
+        public int getX_instances() {
+            return x_instances;
+        }
+
+        public void setX_instances(int x_instances) {
+            this.x_instances = x_instances;
+        }
+
+        public double getY_accuracy() {
+            return y_accuracy;
+        }
+
+        public void setY_accuracy(double y_accuracy) {
+            this.y_accuracy = y_accuracy;
+        }
+    }
 
     Logger logger = LoggerFactory.getLogger(Training.class);
 
@@ -31,7 +64,142 @@ public class Training {
     DataAggregator dataAggregator;
 
     @Scheduled(fixedRateString = "${data.aggregator.decision.tree:10000}")
+    public void trainValidateAndPlot() throws Exception {
+        // normalize data (Value between 0 and 1) or nor
+        boolean normalize = false;
+        int maxNumberTrainings = 200;
+
+        int countTotalValidationErrors;
+        int countCorrectValidations;
+        // Confusion Matrix
+        int [][] confMatrix;
+        String[] a = new String[] {"mysql","nginx","mongodb","postgresql","apache"};
+        List<String> category = Arrays.asList(a);
+
+        // TODO Specific Filter
+        List<MetricsFilter> filterList = new ArrayList<>();
+        // filterList.add(new MetricsFilter(new boolean[]{false,false,true,false,false,false,false,false,false,false,false,false,false,false,false}, "only-memory"));
+        // filterList.add(new MetricsFilter(new boolean[]{false,false,false,true,false,false,false,false,false,false,false,false,false,false,false}, "only-cpu"));
+        // filterList.add(new MetricsFilter(new boolean[]{false,false,true,true,true,true,false,false,false,true,true,true,true,true,true}, "only-numbers-no-image-size"));
+        // filterList.add(new MetricsFilter(new boolean[]{false,false,false,false,false,false,false,false,false,false,false,false,false,true,false}, "only-usedBytesVolume"));
+        filterList.add(new MetricsFilter(new boolean[]{true,false,false,false,false,false,false,false,false,false,false,false,false,false,false}, "only-podName"));
+
+
+        for(MetricsFilter metricsFilter:filterList) {
+
+            confMatrix = new int[5][5];
+
+            // Set Time interval via metrics.interval.seconds in application properties
+            ArrayList<Sample> trainingList = new ArrayList<>();
+            ArrayList<Sample> validationList = new ArrayList<>();
+            dataAggregator.generateTrainingSet(0.5F, trainingList, validationList);
+
+
+            ArrayList<Plot> plotArrayList = new ArrayList<>();
+            for (int i = 1; i <= maxNumberTrainings; i++) {
+                countTotalValidationErrors = 0;
+                countCorrectValidations = 0;
+
+                Plot plot = new Plot();
+                plot.setX_instances(i);
+
+                // Train Model
+                // Take only Number of Trainings from trainingList
+                ArrayList<Sample> trainingListLimit = new ArrayList<>();
+                for (int j = 0; j < i; j++) {
+                    int randomNum = ThreadLocalRandom.current().nextInt(0, trainingList.size() - 1);
+                    trainingListLimit.add(trainingList.get(randomNum));
+                }
+
+                File file  = createEmptyTempFile("tmp_file");
+                System.out.println("Path of the file where the serialized model is stored " + file.getAbsolutePath());
+                J48 wekaModel = dataAggregator.trainModel(metricsFilter, trainingListLimit, normalize);
+                weka.core.SerializationHelper.write(file.getAbsolutePath(), wekaModel);
+                System.out.println(wekaModel);
+
+                try (BufferedReader br = new BufferedReader(new FileReader(file))) {
+                    String line;
+                    while ((line = br.readLine()) != null) {
+                        System.out.println(line);
+                    }
+                }
+                // Validate
+
+                // TODO Create Instances of Training Set Here, with Filter, iterate over them, and validate then
+
+                Instances validationData = dataAggregator.getInstances(metricsFilter,validationList, normalize);
+                /*
+                Instances instances;
+                instances.size();
+                instances.get();
+                */
+                for (int j = 0; j < validationData.size(); j++) {
+                    //for (Sample s : validationList) {
+                    String labelValidation = dataAggregator.validateInstance(wekaModel,validationData.get(j));
+                    //String labelValidation = dataAggregator.validateReturnString(s, wekaModel, metricsFilter.getFilter(),normalize);
+                    int classIndex = validationData.get(j).classIndex();
+                    String classifier = validationData.get(j).toString(classIndex);
+                    if (classifier.equals(labelValidation)) {
+                        logger.debug("Correct Validation");
+                        countCorrectValidations++;
+                    } else {
+                        logger.debug("False Validation");
+                        countTotalValidationErrors++;
+                    }
+                    String outLabel = labelValidation;
+                    String actualLabel = classifier;
+                    int outLabelIndex = category.indexOf(outLabel);
+                    int actualLabelIndex = category.indexOf(actualLabel);
+                    confMatrix[actualLabelIndex][outLabelIndex] += 1;
+
+                }
+                double accuracy = (double) countCorrectValidations / (double) validationData.size();
+                System.out.println(accuracy);
+                plot.setY_accuracy(accuracy);
+                plotArrayList.add(plot);
+            }
+
+            System.out.println("Print Plot Points");
+            for(Plot plot:plotArrayList){
+                // Data Points for LaTeX
+                System.out.print("Instances : " + plot.x_instances + " ");
+                System.out.println("Accuracy " + plot.y_accuracy);
+            }
+            System.out.println("Plot for LaTeX");
+            for(Plot plot:plotArrayList){
+                // Data Points for LaTeX
+                System.out.println(plot.x_instances + " " + plot.y_accuracy);
+            }
+            System.out.println("Build Average");
+            double accuracySum = 0;
+            int space = 10;
+            for(Plot plot:plotArrayList){
+                // Data Points for LaTeX
+                accuracySum = accuracySum + plot.getY_accuracy();
+                if(plot.getX_instances() % space == 0){
+                    System.out.println(plot.x_instances + " " + accuracySum/space);
+                    accuracySum = 0;
+                }
+            }
+            int x = 1;
+        }
+    }
+
+    public static File createEmptyTempFile(String fileName) throws IOException {
+
+        File tempDirectory = new File(System.getProperty("java.io.tmpdir"));
+        File fileWithAbsolutePath = new File(tempDirectory.getAbsolutePath() + fileName);
+
+        Files.touch(fileWithAbsolutePath);
+
+        return fileWithAbsolutePath;
+    }
+
+    //@Scheduled(fixedRateString = "${data.aggregator.decision.tree:10000}")
     public void trainAndValidate() throws Exception {
+        // normalize data (Value between 0 and 1) or nor
+        boolean normalize = true;
+
         int countTotalValidationErrors;
         int countCorrectValidations;
         // Confusion Matrix
@@ -58,12 +226,25 @@ public class Training {
                 ArrayList<Sample> validationList = new ArrayList<>();
                 dataAggregator.generateTrainingSet(ratioTrainingValidation, trainingList, validationList);
                 // Train Model
-                J48 wekaModel = dataAggregator.trainModel(metricsFilter, trainingList);
+                J48 wekaModel = dataAggregator.trainModel(metricsFilter, trainingList, normalize);
                 weka.core.SerializationHelper.write("/Users/lucasstocksmeier/Coding/container-anomaly-detection/metrics-collector/src/main/resources/blobs/" + metricsFilter.getName() + ".model", wekaModel);
                 // Validate
-                for (Sample s : validationList) {
-                    String labelValidation = dataAggregator.validateReturnString(s, wekaModel, metricsFilter.getFilter());
-                    if (s.getLabel().equals(labelValidation)) {
+
+                // TODO Create Instances of Training Set Here, with Filter, iterate over them, and validate then
+
+                Instances validationData = dataAggregator.getInstances(metricsFilter,validationList, normalize);
+                /*
+                Instances instances;
+                instances.size();
+                instances.get();
+                */
+                for (int j = 0; j < validationData.size(); j++) {
+                //for (Sample s : validationList) {
+                    String labelValidation = dataAggregator.validateInstance(wekaModel,validationData.get(j));
+                    //String labelValidation = dataAggregator.validateReturnString(s, wekaModel, metricsFilter.getFilter(),normalize);
+                    int classIndex = validationData.get(j).classIndex();
+                    String classifier = validationData.get(j).toString(classIndex);
+                    if (classifier.equals(labelValidation)) {
                         logger.debug("Correct Validation");
                         countCorrectValidations++;
                     } else {
@@ -71,7 +252,7 @@ public class Training {
                         countTotalValidationErrors++;
                     }
                     String outLabel = labelValidation;
-                    String actualLabel = s.getLabel();
+                    String actualLabel = classifier;
                     int outLabelIndex = category.indexOf(outLabel);
                     int actualLabelIndex = category.indexOf(actualLabel);
                     confMatrix[actualLabelIndex][outLabelIndex] += 1;
@@ -82,10 +263,10 @@ public class Training {
             logger.info("--------------------------------------------------------------");
             logger.info("Total Count Validation Errors: " + countTotalValidationErrors);
             logger.info("Total Count Correct Validation: " + countCorrectValidations);
-            logger.info("--------------------------------------------------------------");
-            logger.info("Confusion Matrix");
-            logger.info("--------------------------------------------------------------");
-            logger.info("y axis contains actual class (input), -> x axis contains predictions (output)");
+            System.out.println();
+            System.out.println("Confusion Matrix");
+            System.out.println("--------------------------------------------------------------");
+            System.out.println("y axis contains actual class (input), -> x axis contains predictions (output)");
             // {"mysql","nginx","mongodb","postgresql","apache"};
             // Using Short Array, max length is 6
             String[] shortNames = new String[] {"mysql","nginx","mongo","psql","apache"};
@@ -149,11 +330,13 @@ public class Training {
         // based on recall and precision
         double f1Score = 2 * ((averagePrecision * averageRecall)/(averagePrecision + averageRecall));
 
+        System.out.println();
         System.out.println("Performance Measurements");
         System.out.println("Accuracy for the Model is " + accuracy);
         System.out.println("Average Precision for the Model is " + averagePrecision);
         System.out.println("Average Recall for the Model is " + averageRecall);
         System.out.println("F1 Score for the Model is " + f1Score);
+        System.out.println();
     }
 
     private double getAverage(double[] precision) {

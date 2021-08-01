@@ -10,6 +10,9 @@ import weka.core.Attribute;
 import weka.core.DenseInstance;
 import weka.core.Instance;
 import weka.core.Instances;
+import weka.filters.Filter;
+import weka.filters.unsupervised.attribute.Normalize;
+import weka.filters.unsupervised.attribute.Standardize;
 
 import java.time.Instant;
 import java.util.*;
@@ -78,11 +81,12 @@ public class J48AnomalyDetector {
         }
     }
 
-    public String validateModel(J48 wekaModel, Sample sample, boolean[] filter) throws Exception {
+    public String validateModel(J48 wekaModel, Sample sample, boolean[] filter, boolean normalize) throws Exception {
 
         List<Sample> sampleList = new ArrayList<>();
         sampleList.add(sample);
         Instances instances = createDatasetWithFilter(sampleList,filter);
+
         double values [] = sample.getMetricsArray();
 
         values = Arrays.copyOf(values, values.length);
@@ -90,7 +94,17 @@ public class J48AnomalyDetector {
         values = applyFilter(values, filter);
 
         Instance instance = new DenseInstance(1.0, values);
+
+        if(normalize){
+            Normalize norm = new Normalize();
+            norm.setInputFormat(instances);
+            Instances normalizedData = Filter.useFilter(instances, norm);
+            instance.setDataset(normalizedData);
+            return inputInstanceIntoModel(wekaModel,instance);
+        }
+
         instance.setDataset(instances);
+
         return inputInstanceIntoModel(wekaModel,instance);
     }
 

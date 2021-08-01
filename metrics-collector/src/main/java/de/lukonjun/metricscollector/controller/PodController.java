@@ -54,7 +54,7 @@ public class PodController {
     DataAggregator dataAggregator;
 
     // Example from https://github.com/kubernetes-client/java/blob/master/examples/examples-release-12/src/main/java/io/kubernetes/client/examples/KubeConfigFileClientExample.java
-    // @Scheduled(fixedRateString = "${pod.controller.scheduling.rate:5000}")
+    // Scheduled(fixedRateString = "${pod.controller.scheduling.rate:5000}")
     private void watchPodsSpawn() throws Exception {
 
         V1PodList list =
@@ -72,7 +72,7 @@ public class PodController {
                 // Time is a Problem, might need to wait for atleast ten seconds till we get proper metrics
                 System.out.println("Fetching Metrics");
                 // TODO For the Start Up dont timeout
-                if(!startUp) TimeUnit.SECONDS.sleep(40);
+                if(!startUp) TimeUnit.SECONDS.sleep(60);
                 // TODO Pods need to be in a running state, otherwise we should ignore them
                 // TODO REPEAT Till List is not of Size Zero anymore, try 12 Iteration with 10 sec break, afterwards throw error
                 List<Metrics> metricsList = dataAggregator.getMetricsTimeInterval(timeIntervalSeconds,podNameList, true); // get Metrics for Containers in Pod, one is enough
@@ -102,7 +102,7 @@ public class PodController {
 
                 // Validate against Model
                 boolean [] filterArray = new boolean[]{false,false,true,true,true,true,true,false,false,true,true,true,true,true,true};
-                String modelResult = j48AnomalyDetector.validateModel(loadModel.getWekaModel(), trainingSamples.get(0), filterArray);
+                String modelResult = j48AnomalyDetector.validateModel(loadModel.getWekaModel(), trainingSamples.get(0), filterArray, false);
                 System.out.println(podName + " got classified by the model as " + modelResult);
 
                 // Create Instance
