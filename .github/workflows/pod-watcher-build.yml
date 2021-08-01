@@ -28,7 +28,7 @@ jobs:
         java-version: 1.14
         
     - name: Build jar with Maven
-      run: mvn clean install
+      run: mvn clean install -DskipTests=true
       
     - name: Build Container Image
       run: docker build --tag ghcr.io/lukonjun/pod-watcher:${{ github.run_id }} .
