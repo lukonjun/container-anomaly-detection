@@ -18,23 +18,25 @@ spec:
         - env:
             - name: kubernetes.connect.from.outside
               value: "false"
-          image: ghcr.io/lukonjun/pod-watcher:1087250990
+            - name: path.serialized.model
+              value: "/mnt/weka_model"
+          image: ghcr.io/lukonjun/pod-watcher:1087294472
           name: pod-watcher-container
-          # volumeMounts:
-          # - name: config-volume
-          #   mountPath: /tmp
+          volumeMounts:
+          - name: config-volume
+            mountPath: /mnt
           securityContext:
             allowPrivilegeEscalation: false
             runAsUser: 0
           resources: {}
-      # volumes:
-      #   - name: config-volume
-      #     configMap:
-      #       # Provide the name of the ConfigMap containing the files you want
-      #       # to add to the container
-      #       name: serialized-model
-      #       items:
-      #       - key: weka_model
-      #         path: weka_model
+      volumes:
+        - name: config-volume
+          configMap:
+            # Provide the name of the ConfigMap containing the files you want
+            # to add to the container
+            name: serialized-model
+            items:
+            - key: weka_model
+              path: weka_model
       restartPolicy: Always
 status: {}
