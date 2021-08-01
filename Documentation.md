@@ -32,7 +32,7 @@ vi /etc/influxdb/influxdb.conf
   # Determines whether user authentication is enabled over HTTP/HTTPS.
   auth-enabled = true
 ```
-4. Install telegraf, an agent who collects data, and connect to influxdb. Follow the Steps described [here](https://github.com/lukonjun/container-anomaly-detection/tree/main/k3s/telegraf).
+4. Install telegraf, an agent who collects data, and connects to influxdb. Follow the Steps described [here](https://github.com/lukonjun/container-anomaly-detection/tree/main/k3s/telegraf).
 
 5. Install the metrics-collector to your cluster and train a model. Make sure to modify the Environment Variables to your needs in the Deployment.yml. 
 A detailed overview of the Options can be found here.
