@@ -10,7 +10,7 @@ influxdb.server.url | http://116.203.124.188:8086 |
 influxdb.username | pod_metrics |
 influxdb.password | mypassword |
 influxdb.database | k3s_telegraf_ds |
-data.aggregator.decision.tree.classifier.list | mysql,nginx | list of classifiers for our model, needs to match the classifiers of the trained model
+data.aggregator.decision.tree.classifier.list | mysql,nginx | list of classifiers for our model, needs to match exactly the classifiers list of the trained model
 timeout.fetching.metrics | 120000 | timeout for a thread to fetch metrics for a container, after the timeout is exceeded the thread finishes
 path.serialized.model | /tmp/model | Path to the File in the Container where the serialized model is read 
 
