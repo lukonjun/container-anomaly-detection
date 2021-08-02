@@ -18,7 +18,17 @@ spec:
         - env:
             - name: kubernetes.connect.from.outside
               value: "false"
-          image: ghcr.io/lukonjun/metrics-collector:lukonjun
+            - name: influxdb.server.url
+              value: "http://94.130.56.11:8086" 
+            - name: influxdb.username
+              value: "user_k3s_telegraf_ds" 
+            - name: influxdb.password
+              value: "<mypassword>" 
+            - name: influxdb.database
+              value: "k3s_telegraf_ds" 
+            - name: data.aggregator.decision.tree.classifier.list
+              value: "nginx,mysql"
+          image: ghcr.io/lukonjun/metrics-collector:1089572891
           name: metrics-collector-container
           securityContext:
             allowPrivilegeEscalation: false
