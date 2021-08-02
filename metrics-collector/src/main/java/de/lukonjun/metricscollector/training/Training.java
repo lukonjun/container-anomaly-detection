@@ -63,9 +63,6 @@ public class Training {
     @Value("${training.maxNumber:100}")
     private int trainingMaxNumber;
 
-    @Value("${training.path.serialized.file}")
-    private String pathSerializedFile;
-
     @Autowired
     DataAggregator dataAggregator;
 
