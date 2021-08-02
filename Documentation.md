@@ -11,7 +11,7 @@ kubectl get nodes
 kubectl config view --raw >~/.kube/config
 chmod 600 ~/.kube/config
 ```
-3. Install influxdb as our Timeseries Database, as collected Metrics will be saved here. This can be done on a sperate server, on the same server or also in the Kubernetes Cluster running in a container. 
+3. Install influxdb as our Timeseries Database. This can be done on a sperate server, on the same server or also in the Kubernetes Cluster running in a container.
 For convenience I am going to install it on the same server, however all options should work. This [Guide](https://computingforgeeks.com/install-influxdb-on-ubuntu-and-debian/) gives instructions on the installation. 
 This process can be a bit tricky, here is a part of my configuration.
 ```
@@ -34,8 +34,8 @@ vi /etc/influxdb/influxdb.conf
 ```
 4. Install telegraf, an agent who collects data, and connects to influxdb. Follow the Steps described [here](https://github.com/lukonjun/container-anomaly-detection/tree/main/k3s/telegraf).
 
-5. Install the metrics-collector to your cluster and train a model (This Step is only necessary if you want to train your own model). Make sure to modify the Environment Variables to your needs in the Deployment.yml. 
-A detailed overview of the Options can be found [here](https://github.com/lukonjun/container-anomaly-detection#metrics-collector)
+5. Install the metrics-collector to your cluster and train a model (this Step is only necessary if you want to train your own model). Make sure to modify the Environment Variables to your needs in the Deployment.yml. 
+A detailed overview of the Application Properties can be found [here](https://github.com/lukonjun/container-anomaly-detection#metrics-collector)
 ```bash
 git clone https://github.com/lukonjun/container-anomaly-detection.git
 kubectl apply -f container-anomaly-detection/kubernetes/Namespace.yml
@@ -67,4 +67,4 @@ kubectl apply -f container-anomaly-detection/kubernetes/Namespace.yml
 kubectl apply -f container-anomaly-detection/kubernetes/pod-watcher/
 kubectl get pods | grep pod-watcher
 ```
-For every new spawning Pod a thread is started that trys to gather Data for, the timeout of every Thread can be set here. View again the Properties of the Container for special configuration and adapt in the Deployment.yml. Make sure that the classifier List you specify 'data.aggregator.decision.tree.classifier.list' match the Model you provide in the ConfigMap ⚠️ otherwise this will lead to confusing false results.
+For every new spawning Pod a thread is started that trys to gather Data for, the timeout of every Thread can be set here. View again the Properties of the Container for special configuration and adapt in the Deployment.yml. Make sure that the classifier List you specify `data.aggregator.decision.tree.classifier.list` match the Model you provide in the ConfigMap ⚠️ otherwise this will lead to confusing false results.
