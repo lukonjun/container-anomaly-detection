@@ -1,9 +1,13 @@
-add the helm repo
+If not already done install helm
+```bash
+curl https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3 | bash
+```
+Add the helm repo
 ```bash
 helm repo add influxdata https://helm.influxdata.com/  
 helm pull --untar influxdata/telegraf-ds  
 ```
-Set Up a new User in the influxdb database, Public Ip of our InfluxDB is 116.203.124.188
+Set Up a new User in the influxdb database (if authentication if configured)
 ```bash
 root@influxdb:~# influx -username <username>  -password '<mypassword>'
 Connected to http://localhost:8086 version 1.8.5
@@ -35,6 +39,5 @@ install
 ```bash
 helm upgrade --install --namespace telegraf-ds --install telegraf-ds ./telegraf-ds
 ```
-Check the logs of the Container, and also if data is written to influxdb
-Connect InfluxDB to Grafana Configuration > Data Sources > Influx DB 
-There is already a great Dashboard which we can import https://grafana.com/grafana/dashboards/9111
+Check the logs of the Container, and also if data is written to influxdb.  
+If you want to conntect influx to Grafana this is a great dashboard https://grafana.com/grafana/dashboards/9111
