@@ -3,7 +3,7 @@
 
 2. Install Docker as the Container Runtime and then k3s as the Kubernetes Distribution (feel free to use every Kubernetes Flavour that can use docker as a runtime, 
 using docker however is mandatory for the installation of our monitoring stack).
-```
+```bash
 curl https://releases.rancher.com/install-docker/20.10.sh | sh (docker installation script)
 docker -v
 curl -sfL https://get.k3s.io | sh -s - server --docker
@@ -35,9 +35,28 @@ vi /etc/influxdb/influxdb.conf
 4. Install telegraf, an agent who collects data, and connects to influxdb. Follow the Steps described [here](https://github.com/lukonjun/container-anomaly-detection/tree/main/k3s/telegraf).
 
 5. Install the metrics-collector to your cluster and train a model. Make sure to modify the Environment Variables to your needs in the Deployment.yml. 
-A detailed overview of the Options can be found here.
-```
+A detailed overview of the Options can be found [here](https://github.com/lukonjun/container-anomaly-detection#metrics-collector)
+```bash
 git clone https://github.com/lukonjun/container-anomaly-detection.git
 kubectl apply -f container-anomaly-detection/kubernetes/Namespace.yml
 kubectl apply -f container-anomaly-detection/kubernetes/metrics-collector/
+```
+Pay special attention to the property `data.aggregator.decision.tree.classifier.list`. This list specifies the classifiers for the training and also determines which Pod Metrics are used in the Training Set for the training of the Model. For every Pod it gets checked if the PodName contains the Label.
+```java
+private String containsLabel(V1.Pod pod, List<String> labels) {
+    for (String label : labels) {
+        if (pod.getMetadata().getName().contains(label)) {
+            return label;
+        }
+    }
+    return null;
+}
+```
+So Pay special attention ⚠️
+that if try to train a model, your pods have a Name that matched an entry in the classifier List `data.aggregator.decision.tree.classifier.list` and you edit the classifier List according to your needs.  
+If the training succeds you will see In the console output a Path to the file of the serialized model. Complete the following steps to able to reuse the model for the pod watcher. 
+```bash
+kubectl logs metrics-collector-74ff6d4db4-8gtts | grep path
+kubectl exec -it metrics-collector-74ff6d4db4-8gtts /bin/sh
+base64 tmptmp_file (Copy in an Editor)
 ```
