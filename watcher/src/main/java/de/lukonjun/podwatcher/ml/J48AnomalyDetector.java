@@ -2,6 +2,7 @@ package de.lukonjun.podwatcher.ml;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import weka.classifiers.trees.J48;
 import weka.core.Attribute;
@@ -18,9 +19,15 @@ public class J48AnomalyDetector {
 
     Logger logger = LoggerFactory.getLogger(J48AnomalyDetector.class);
 
+    private List<String> labels;
+
+    public J48AnomalyDetector(List<String> labels) {
+        this.labels = labels;
+    }
+
     //All possible classes (different labels) have to be defined at the beginning. Here its just 0 and 1 because of simple anomaly detection (anomaly or normal)
     public List<String> allClasses() {
-        return Arrays.asList("mysql","nginx","mongodb","postgresql","apache");
+        return labels;
     }
 
     public String inputInstanceIntoModel(J48 wekaModel, Instance instance) throws Exception {
@@ -52,16 +59,16 @@ public class J48AnomalyDetector {
         return instances;
     }
 
-    public synchronized void fillDatasetWithFilter(Instances instances, List<Sample> trainingSamples, boolean[] filter) {
+    public synchronized void fillDatasetWithFilter(Instances instances, List<Sample> trainingSamples, boolean[] filter,@Value("#{'${data.aggregator.decision.tree.classifier.list}'.split(',')}") List<String> labelsList) {
         //logger.info("Train-values: " + trainingSamples.get(0).getHeaderList().toString());
 
         Map<String, Integer> numberMapping = new HashMap<>();
         // Adding key-value pairs to a HashMap
-        numberMapping.put("mysql", 0);
-        numberMapping.put("nginx", 1);
-        numberMapping.put("mongodb", 2);
-        numberMapping.put("postgresql", 3);
-        numberMapping.put("apache", 4);
+        int count = 0;
+        for(String label:labelsList){
+            numberMapping.put(label, count);
+            count++;
+        }
 
         for (Sample sample : trainingSamples) {
 

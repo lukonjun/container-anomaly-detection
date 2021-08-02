@@ -40,7 +40,7 @@ public class DataAggregator {
     @Value("${data.aggregator.decision.tree.metrics.interval.seconds:120}")
     private int fetchMetricsInterval;
 
-    @Value("#{'${data.aggregator.decision.tree.labels.list}'.split(',')}")
+    @Value("#{'${data.aggregator.decision.tree.classifier.list}'.split(',')}")
     private List<String> labels;
 
     Logger logger = LoggerFactory.getLogger(DataAggregator.class);
@@ -65,9 +65,9 @@ public class DataAggregator {
     }
 
     public J48 trainModel(MetricsFilter metricsFilter, ArrayList<Sample> trainingList, boolean normalizationFilter) throws Exception {
-        J48AnomalyDetector j48AnomalyDetector = new J48AnomalyDetector();
+        J48AnomalyDetector j48AnomalyDetector = new J48AnomalyDetector(labels);
         Instances instancesWithFilter = j48AnomalyDetector.createDatasetWithFilter(trainingList, metricsFilter.getFilter());
-        j48AnomalyDetector.fillDatasetWithFilter(instancesWithFilter,trainingList, metricsFilter.getFilter());
+        j48AnomalyDetector.fillDatasetWithFilter(instancesWithFilter,trainingList, metricsFilter.getFilter(),labels);
 
         // Train weka model
         J48 wekaModel = new J48();
@@ -102,12 +102,12 @@ public class DataAggregator {
         filterList.add(new MetricsFilter(new boolean[]{false,false,true,true,true,true,false,false,false,true,true,true,true,true,true}, "only-numbers-no-image-size"));
         String path = "/Users/lucasstocksmeier/Coding/container-anomaly-detection/metrics-collector/src/main/resources/ml/container-metrics-";
 
-        J48AnomalyDetector j48AnomalyDetector = new J48AnomalyDetector();
+        J48AnomalyDetector j48AnomalyDetector = new J48AnomalyDetector(labels);
 
         for(MetricsFilter filter:filterList) {
 
             Instances instancesWithFilter = j48AnomalyDetector.createDatasetWithFilter(trainingSamples, filter.getFilter());
-            j48AnomalyDetector.fillDatasetWithFilter(instancesWithFilter, trainingSamples, filter.getFilter());
+            j48AnomalyDetector.fillDatasetWithFilter(instancesWithFilter, trainingSamples, filter.getFilter(),labels);
 
             // Write to File
             de.lukonjun.podwatcher.helper.FileWriter.writeArffFile(instancesWithFilter,path,filter.getName());
@@ -130,7 +130,7 @@ public class DataAggregator {
     }
 
     public boolean validate(Sample sample, J48 wekaModel, boolean[] filter, boolean normalize) throws Exception {
-        J48AnomalyDetector j48AnomalyDetector = new J48AnomalyDetector();
+        J48AnomalyDetector j48AnomalyDetector = new J48AnomalyDetector(labels);
         String sampleLabel = sample.getLabel();
         String validationLabel = j48AnomalyDetector.validateModel(wekaModel, sample,filter, normalize);
         logger.debug("sampleLabel: " + sampleLabel + " validationLabel: " + validationLabel);
@@ -138,7 +138,7 @@ public class DataAggregator {
     }
 
     public String validateReturnString(Sample sample, J48 wekaModel, boolean[] filter, boolean normalize) throws Exception {
-        J48AnomalyDetector j48AnomalyDetector = new J48AnomalyDetector();
+        J48AnomalyDetector j48AnomalyDetector = new J48AnomalyDetector(labels);
         String sampleLabel = sample.getLabel();
         String validationLabel = j48AnomalyDetector.validateModel(wekaModel, sample,filter,normalize);
         logger.debug("sampleLabel: " + sampleLabel + " validationLabel: " + validationLabel);
@@ -257,9 +257,9 @@ public class DataAggregator {
     }
 
     public Instances getInstances(MetricsFilter metricsFilter, ArrayList<Sample> validationList, boolean normalize) throws Exception {
-        J48AnomalyDetector j48AnomalyDetector = new J48AnomalyDetector();
+        J48AnomalyDetector j48AnomalyDetector = new J48AnomalyDetector(labels);
         Instances instancesWithFilter = j48AnomalyDetector.createDatasetWithFilter(validationList, metricsFilter.getFilter());
-        j48AnomalyDetector.fillDatasetWithFilter(instancesWithFilter,validationList, metricsFilter.getFilter());
+        j48AnomalyDetector.fillDatasetWithFilter(instancesWithFilter,validationList, metricsFilter.getFilter(),labels);
 
         if(normalize){
             Normalize norm = new Normalize();
@@ -272,7 +272,7 @@ public class DataAggregator {
     }
 
     public String validateInstance(J48 wekaModel, Instance instance) throws Exception {
-        J48AnomalyDetector j48AnomalyDetector = new J48AnomalyDetector();
+        J48AnomalyDetector j48AnomalyDetector = new J48AnomalyDetector(labels);
         String sampleLabel = instance.toString(instance.classIndex());
         String validationLabel = j48AnomalyDetector.inputInstanceIntoModel(wekaModel,instance);
         logger.debug("sampleLabel: " + sampleLabel + " validationLabel: " + validationLabel);

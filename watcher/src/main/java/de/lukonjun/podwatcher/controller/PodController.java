@@ -19,6 +19,7 @@ import io.kubernetes.client.proto.V1;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Controller;
@@ -38,6 +39,12 @@ public class PodController {
 
     Logger logger = LoggerFactory.getLogger(PodController.class);
 
+    @Value("#{'${data.aggregator.decision.tree.classifier.list}'.split(',')}")
+    private List<String> labels;
+
+    @Value("${timeout.fetching.metrics}")
+    private int timeOutFetchingMetricsMilliseconds;
+
     @Autowired
     ApiConnection apiConnection;
 
@@ -51,58 +58,70 @@ public class PodController {
     @Scheduled(fixedRateString = "${pod.controller.scheduling.rate:5000}")
     private void watchPodsSpawn() throws Exception {
 
+        // Configuration Time Interval Metrics
+        int timeIntervalSeconds = 120;
+        int timeOutFetchingMetricsMilliseconds = 120000;
+
         V1PodList list =
                 apiConnection.createConnection().getApi().listPodForAllNamespaces(null, null, null, null, null, null, null, null, null, null);
-        logger.info("watching pods");
+        logger.info("Start watching pods");
         // check for running Pods
         for (V1Pod item : list.getItems()) {
             String podName = item.getMetadata().getName();
             if(!POD_LIST.contains(podName)){
                 POD_LIST.add(podName);
-                System.out.println("Pod " + podName + " spawned");
-                int timeIntervalSeconds = 120;
-                ArrayList<String> podNameList = new ArrayList<>();
-                podNameList.add(podName);
-                // Time is a Problem, might need to wait for atleast ten seconds till we get proper metrics
-                System.out.println("Fetching Metrics");
-                // TODO For the Start Up dont timeout
-                if(!startUp) TimeUnit.SECONDS.sleep(60);
-                // TODO Pods need to be in a running state, otherwise we should ignore them
-                // TODO REPEAT Till List is not of Size Zero anymore, try 12 Iteration with 10 sec break, afterwards throw error
-                List<Metrics> metricsList = dataAggregator.getMetricsTimeInterval(timeIntervalSeconds,podNameList, true); // get Metrics for Containers in Pod, one is enough
-                int count = 0;
-                /*
-                while (metricsList.size() == 0){
-                    if (count == 6)break;
-                    logger.info("iteration " + count);
-                    TimeUnit.SECONDS.sleep(10);
-                    metricsList = dataAggregator.getMetricsTimeInterval(timeIntervalSeconds,podNameList, true);
-                    count++;
-                }
-                 */
-                if(metricsList.size() == 0){
-                    logger.error("metricsList is of size zero, cant classify pod");
-                    continue;
-                }
-                // TODO Make sure we only have metrics for each unique container
-                List<Metrics> metricsList1 = new ArrayList<>();
-                metricsList1.add(metricsList.get(0));
-                List<Sample> trainingSamples = dataAggregator.createSample(metricsList1);
+                System.out.println("Recognized Pod " + podName);
+                // Implementation with Runnable
+                Runnable runnable = new Runnable() {
+                    @Override
+                    public void run() {
+                        String threadName = Thread.currentThread().getName();
+                        System.out.println(threadName + " running");
 
-                J48AnomalyDetector j48AnomalyDetector = new J48AnomalyDetector();
-                // Set Up Instances
-                // Instances instancesWithFilter = j48AnomalyDetector.createDatasetWithFilter(trainingSamples, null);
-                // j48AnomalyDetector.fillDatasetWithFilter(instancesWithFilter, trainingSamples, null);
+                        List<Metrics> metricsList = null;
+                        ArrayList<String> podNameList = new ArrayList<>();
+                        podNameList.add(podName);
+                        // time Problem, run only for certain seconds amount
+                        long startTime = System.currentTimeMillis();
+                        // Try for 60 seconds
+                        while((metricsList == null || metricsList.size() == 0)&&(System.currentTimeMillis()-startTime)<timeOutFetchingMetricsMilliseconds){
+                            try {
+                                metricsList = dataAggregator.getMetricsTimeInterval(timeIntervalSeconds,podNameList, true);
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                            }
+                            //System.out.println((System.currentTimeMillis()-startTime)/1000);
+                        }
+                        if(metricsList == null || metricsList.size() == 0){
+                            System.out.println("Timeout for " + podName + " cant classify as we cannot fetch Metrics in the Time Interval of " + timeOutFetchingMetricsMilliseconds+ " Milliseconds");
+                        }else {
+                            List<Metrics> metricsList1 = new ArrayList<>();
+                            metricsList1.add(metricsList.get(0));
+                            List<Sample> trainingSamples = dataAggregator.createSample(metricsList1);
 
-                // Validate against Model
-                boolean [] filterArray = new boolean[]{false,false,true,true,true,true,true,false,false,true,true,true,true,true,true};
-                // Need to add Serialized Model here loadModel.getWekaModel()
-                String modelResult = j48AnomalyDetector.validateModel(loadModel.getWekaModel(), trainingSamples.get(0), filterArray, false);
-                System.out.println(podName + " got classified by the model as " + modelResult);
+                            J48AnomalyDetector j48AnomalyDetector = new J48AnomalyDetector(labels);
+                            // Set Up Instances
+                            // Instances instancesWithFilter = j48AnomalyDetector.createDatasetWithFilter(trainingSamples, null);
+                            // j48AnomalyDetector.fillDatasetWithFilter(instancesWithFilter, trainingSamples, null);
 
-                // Create Instance
-                // Classify all Containers
-                // Print out the Result
+                            // Validate against Model
+                            boolean[] filterArray = new boolean[]{false, false, true, true, true, true, true, false, false, true, true, true, true, true, true};
+                            // Need to add Serialized Model here loadModel.getWekaModel()
+                            String modelResult = null;
+                            try {
+                                modelResult = j48AnomalyDetector.validateModel(loadModel.getWekaModel(), trainingSamples.get(0), filterArray, false);
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                            }
+                            System.out.println(podName + " got classified by the model as " + modelResult);
+
+                            System.out.println(threadName + " finished");
+                        }
+                    }
+                };
+
+                Thread threadRunnableInterface = new Thread( runnable, "Thread " + podName);
+                threadRunnableInterface.start();
             }
         }
         PodController.startUp = false;

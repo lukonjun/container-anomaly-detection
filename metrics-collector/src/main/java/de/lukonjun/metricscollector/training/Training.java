@@ -16,9 +16,7 @@ import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Array;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 
 import java.io.*;
@@ -59,21 +57,25 @@ public class Training {
     @Value("${training.ratio:0.8}")
     private float ratioTrainingValidation;
 
+    @Value("#{'${data.aggregator.decision.tree.classifier.list}'.split(',')}")
+    private List<String> labels;
+
+    @Value("${training.maxNumber:100}")
+    private int trainingMaxNumber;
+
     @Autowired
     DataAggregator dataAggregator;
 
-    @Scheduled(fixedRateString = "${data.aggregator.decision.tree:10000}")
+    // @Scheduled(fixedRateString = "${data.aggregator.decision.tree.interval:10000}")
     public void trainValidateAndPlot() throws Exception {
-        // normalize data (Value between 0 and 1) or nor
-        boolean normalize = false;
-        int maxNumberTrainings = 200;
+
+        boolean normalize = false; // normalize data (Value between 0 and 1) or not
+        int maxNumberTrainings = trainingMaxNumber; // train with 1 - X Datasets, starting with 1,2,3 and so on
 
         int countTotalValidationErrors;
         int countCorrectValidations;
         // Confusion Matrix
         int [][] confMatrix;
-        String[] a = new String[] {"mysql","nginx","mongodb","postgresql","apache"};
-        List<String> category = Arrays.asList(a);
 
         // TODO Specific Filter
         List<MetricsFilter> filterList = new ArrayList<>();
@@ -82,7 +84,6 @@ public class Training {
         // filterList.add(new MetricsFilter(new boolean[]{false,false,true,true,true,true,false,false,false,true,true,true,true,true,true}, "only-numbers-no-image-size"));
         // filterList.add(new MetricsFilter(new boolean[]{false,false,false,false,false,false,false,false,false,false,false,false,false,true,false}, "only-usedBytesVolume"));
         filterList.add(new MetricsFilter(new boolean[]{true,false,false,false,false,false,false,false,false,false,false,false,false,false,false}, "only-podName"));
-
 
         for(MetricsFilter metricsFilter:filterList) {
 
@@ -147,8 +148,8 @@ public class Training {
                     }
                     String outLabel = labelValidation;
                     String actualLabel = classifier;
-                    int outLabelIndex = category.indexOf(outLabel);
-                    int actualLabelIndex = category.indexOf(actualLabel);
+                    int outLabelIndex = this.labels.indexOf(outLabel);
+                    int actualLabelIndex = this.labels.indexOf(actualLabel);
                     confMatrix[actualLabelIndex][outLabelIndex] += 1;
 
                 }
@@ -194,7 +195,7 @@ public class Training {
         return fileWithAbsolutePath;
     }
 
-    //@Scheduled(fixedRateString = "${data.aggregator.decision.tree:10000}")
+    @Scheduled(fixedRateString = "${data.aggregator.decision.tree.interval:10000}")
     public void trainAndValidate() throws Exception {
         // normalize data (Value between 0 and 1) or nor
         boolean normalize = true;
@@ -203,15 +204,13 @@ public class Training {
         int countCorrectValidations;
         // Confusion Matrix
         int [][] confMatrix;
-        String[] a = new String[] {"mysql","nginx","mongodb","postgresql","apache"};
-        List<String> category = Arrays.asList(a);
 
         // TODO Specific Filter
         List<MetricsFilter> filterList = new ArrayList<>();
-        filterList.add(new MetricsFilter(new boolean[]{false,false,true,false,false,false,false,false,false,false,false,false,false,false,false}, "only-memory"));
-        filterList.add(new MetricsFilter(new boolean[]{false,false,false,true,false,false,false,false,false,false,false,false,false,false,false}, "only-cpu"));
-        filterList.add(new MetricsFilter(new boolean[]{false,false,true,true,true,true,false,false,false,true,true,true,true,true,true}, "only-numbers-no-image-size"));
-        filterList.add(new MetricsFilter(new boolean[]{false,false,false,false,false,false,false,false,false,false,false,false,false,true,false}, "only-usedBytesVolume"));
+        //filterList.add(new MetricsFilter(new boolean[]{false,false,true,false,false,false,false,false,false,false,false,false,false,false,false}, "only-memory"));
+        //filterList.add(new MetricsFilter(new boolean[]{false,false,false,true,false,false,false,false,false,false,false,false,false,false,false}, "only-cpu"));
+        //filterList.add(new MetricsFilter(new boolean[]{false,false,true,true,true,true,false,false,false,true,true,true,true,true,true}, "only-numbers-no-image-size"));
+        //filterList.add(new MetricsFilter(new boolean[]{false,false,false,false,false,false,false,false,false,false,false,false,false,true,false}, "only-usedBytesVolume"));
         filterList.add(new MetricsFilter(new boolean[]{true,false,false,false,false,false,false,false,false,false,false,false,false,false,false}, "only-podName"));
 
         for(MetricsFilter metricsFilter:filterList) {
@@ -226,6 +225,24 @@ public class Training {
                 dataAggregator.generateTrainingSet(ratioTrainingValidation, trainingList, validationList);
                 // Train Model
                 J48 wekaModel = dataAggregator.trainModel(metricsFilter, trainingList, normalize);
+                File file  = createEmptyTempFile("tmp_file");
+                System.out.println("Path of the file where the serialized model is stored " + file.getAbsolutePath());
+                weka.core.SerializationHelper.write(file.getAbsolutePath(), wekaModel);
+                System.out.println(wekaModel);
+
+                // https://www.baeldung.com/java-base64-encode-and-decode
+                // Print Base64 String of File
+                StringBuilder stringBuilder = new StringBuilder();
+                try (BufferedReader br = new BufferedReader(new FileReader(file))) {
+                    String line;
+                    while ((line = br.readLine()) != null) {
+                        stringBuilder.append(line);
+                    }
+                }
+                String encodedString = Base64.getEncoder().encodeToString(stringBuilder.toString().getBytes());
+                System.out.println("---- BASE64 ENCODED MODEL START ----");
+                System.out.println(encodedString);
+                System.out.println("---- BASE64 ENCODED MODEL START ----");
                 weka.core.SerializationHelper.write("/Users/lucasstocksmeier/Coding/container-anomaly-detection/metrics-collector/src/main/resources/blobs/" + metricsFilter.getName() + ".model", wekaModel);
                 // Validate
 
@@ -252,8 +269,8 @@ public class Training {
                     }
                     String outLabel = labelValidation;
                     String actualLabel = classifier;
-                    int outLabelIndex = category.indexOf(outLabel);
-                    int actualLabelIndex = category.indexOf(actualLabel);
+                    int outLabelIndex = this.labels.indexOf(outLabel);
+                    int actualLabelIndex = this.labels.indexOf(actualLabel);
                     confMatrix[actualLabelIndex][outLabelIndex] += 1;
                 }
                 // Build Confusion Matrix

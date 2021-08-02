@@ -55,7 +55,6 @@ public class InfluxController {
         Documentation
         https://devconnected.com/the-definitive-guide-to-influxdb-in-2019/ (Full Guide)
      */
-    //@Scheduled(fixedRateString = "${influxdb.metrics.collection.rate:10000}")
     public void getMetricsFromInflux() throws InterruptedException, IOException, ApiException {
 
         InfluxDB influxDB = InfluxDBFactory.connect(serverUrl, userName, password);
