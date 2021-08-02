@@ -63,6 +63,9 @@ public class Training {
     @Value("${training.maxNumber:100}")
     private int trainingMaxNumber;
 
+    @Value("${training.path.serialized.file}")
+    private String pathSerializedFile;
+
     @Autowired
     DataAggregator dataAggregator;
 
@@ -240,12 +243,14 @@ public class Training {
                     }
                 }
                 String encodedString = Base64.getEncoder().encodeToString(stringBuilder.toString().getBytes());
+                /*
                 System.out.println("---- BASE64 ENCODED MODEL START ----");
                 System.out.println(encodedString);
                 System.out.println("---- BASE64 ENCODED MODEL START ----");
-                weka.core.SerializationHelper.write("/Users/lucasstocksmeier/Coding/container-anomaly-detection/metrics-collector/src/main/resources/blobs/" + metricsFilter.getName() + ".model", wekaModel);
+                */
+                // weka.core.SerializationHelper.write(  pathSerializedFile + "/" + metricsFilter.getName() + ".model", wekaModel);
                 // Validate
-
+                // System.out.println("Path of the serialized Model is also: " + pathSerializedFile + "/" + metricsFilter.getName() + ".model");
                 // TODO Create Instances of Training Set Here, with Filter, iterate over them, and validate then
 
                 Instances validationData = dataAggregator.getInstances(metricsFilter,validationList, normalize);
