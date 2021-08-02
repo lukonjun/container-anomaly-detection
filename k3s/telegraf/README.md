@@ -31,6 +31,14 @@ vi telegraf-ds/values.yaml
     user_agent: "telegraf"
     insecure_skip_verify: false
 ```
+Overwrite some Configuration of the ConfigMap to access all monitoring Data
+```
+vi telegraf-ds/templates/configmap.yaml
+    [[inputs.docker]]
+    endpoint = "unix:///var/run/docker.sock"
+    total = true
+    total_include = ["cpu", "blkio", "network"]
+```
 create namespace
 ```bash
 kubectl create namespace telegraf-ds 
