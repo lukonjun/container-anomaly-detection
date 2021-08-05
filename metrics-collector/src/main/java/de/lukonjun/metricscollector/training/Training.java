@@ -83,7 +83,7 @@ public class Training {
         // filterList.add(new MetricsFilter(new boolean[]{false,false,false,true,false,false,false,false,false,false,false,false,false,false,false}, "only-cpu"));
         // filterList.add(new MetricsFilter(new boolean[]{false,false,true,true,true,true,false,false,false,true,true,true,true,true,true}, "only-numbers-no-image-size"));
         // filterList.add(new MetricsFilter(new boolean[]{false,false,false,false,false,false,false,false,false,false,false,false,false,true,false}, "only-usedBytesVolume"));
-        filterList.add(new MetricsFilter(new boolean[]{true,false,false,false,false,false,false,false,false,false,false,false,false,false,false}, "only-podName"));
+        filterList.add(new MetricsFilter(new boolean[]{true,true,true,true,true,true,true,true,true,true,true,true,true,true,true}, "only-podName"));
 
         for(MetricsFilter metricsFilter:filterList) {
 
