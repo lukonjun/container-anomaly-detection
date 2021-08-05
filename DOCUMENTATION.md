@@ -56,9 +56,9 @@ private String containsLabel(V1.Pod pod, List<String> labels) {
 ```bash
 kubectl logs metrics-collector-74ff6d4db4-8gtts | grep path
 kubectl exec -it metrics-collector-74ff6d4db4-8gtts /bin/sh
-base64 tmptmp_file (Copy in an Editor)
+base64 tmpSerialized_Model  | tr -d \\n (Copy in an Editor, dont copy the / at the end)
 ```
-8. Install the pod-watcher to your cluster and insert if you have trained a model your base64 decoded String into the ConfigMap.yml. If not you can you take the default yaml which includes a default model trained for mysql,nginx,apache,postgres and mongo.   
+8. Install the pod-watcher to your cluster and **insert if you have trained a model your base64 decoded String into the ConfigMap.yml**. If not you can you take the default yaml which includes a default model trained for mysql,nginx,apache,postgres and mongo.   
 For every new spawning Pod a thread is started that trys to gather Data, the timeout of every Thread can be set via `timeout.fetching.metrics`. View again the Properties of the Container for special configuration and adapt in the Deployment.yml. Again make sure that the classifier List you specify `data.aggregator.decision.tree.classifier.list` match the Model you provide in the ConfigMap ⚠️. Otherwise this will lead to confusing false results.
 ```bash
 git clone https://github.com/lukonjun/container-anomaly-detection.git
