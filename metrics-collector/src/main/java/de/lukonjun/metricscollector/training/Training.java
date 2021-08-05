@@ -110,12 +110,15 @@ public class Training {
                     int randomNum = ThreadLocalRandom.current().nextInt(0, trainingList.size() - 1);
                     trainingListLimit.add(trainingList.get(randomNum));
                 }
-
-                File file  = createEmptyTempFile("tmp_file");
-                System.out.println("Path of the file where the serialized model is stored " + file.getAbsolutePath());
+                System.out.println("Start Training");
+                System.out.println("");
                 J48 wekaModel = dataAggregator.trainModel(metricsFilter, trainingListLimit, normalize);
-                weka.core.SerializationHelper.write(file.getAbsolutePath(), wekaModel);
                 System.out.println(wekaModel);
+                System.out.println("");
+                File file  = createEmptyTempFile("Serialized_Model");
+                System.out.println("Path of the file where the serialized model is stored " + file.getAbsolutePath());
+                System.out.println("");
+                weka.core.SerializationHelper.write(file.getAbsolutePath(), wekaModel);
 
                 try (BufferedReader br = new BufferedReader(new FileReader(file))) {
                     String line;
@@ -198,7 +201,7 @@ public class Training {
     @Scheduled(fixedRateString = "${data.aggregator.decision.tree.interval:10000}")
     public void trainAndValidate() throws Exception {
         // normalize data (Value between 0 and 1) or nor
-        boolean normalize = true;
+        boolean normalize = false;
 
         int countTotalValidationErrors;
         int countCorrectValidations;
@@ -211,7 +214,8 @@ public class Training {
         //filterList.add(new MetricsFilter(new boolean[]{false,false,false,true,false,false,false,false,false,false,false,false,false,false,false}, "only-cpu"));
         //filterList.add(new MetricsFilter(new boolean[]{false,false,true,true,true,true,false,false,false,true,true,true,true,true,true}, "only-numbers-no-image-size"));
         //filterList.add(new MetricsFilter(new boolean[]{false,false,false,false,false,false,false,false,false,false,false,false,false,true,false}, "only-usedBytesVolume"));
-        filterList.add(new MetricsFilter(new boolean[]{true,false,false,false,false,false,false,false,false,false,false,false,false,false,false}, "only-podName"));
+        // filterList.add(new MetricsFilter(new boolean[]{true,false,false,false,false,false,false,false,false,false,false,false,false,false,false}, "only-podName"));
+        filterList.add(new MetricsFilter(new boolean[]{true,true,true,true,true,true,true,true,true,true,true,true,true,true,true}, "all"));
 
         for(MetricsFilter metricsFilter:filterList) {
             countTotalValidationErrors = 0;
@@ -224,12 +228,18 @@ public class Training {
                 ArrayList<Sample> validationList = new ArrayList<>();
                 dataAggregator.generateTrainingSet(ratioTrainingValidation, trainingList, validationList);
                 // Train Model
+                System.out.println("");
+                System.out.println("Start New Training with labels " + labels);
+                System.out.println("");
                 J48 wekaModel = dataAggregator.trainModel(metricsFilter, trainingList, normalize);
-                File file  = createEmptyTempFile("tmp_file");
-                System.out.println("Path of the file where the serialized model is stored " + file.getAbsolutePath());
-                weka.core.SerializationHelper.write(file.getAbsolutePath(), wekaModel);
                 System.out.println(wekaModel);
+                System.out.println("");
+                File file  = createEmptyTempFile("Serialized_Model");
+                System.out.println("Path of the file where the serialized model is stored " + file.getAbsolutePath());
+                System.out.println("");
+                weka.core.SerializationHelper.write(file.getAbsolutePath(), wekaModel);
 
+                /*
                 // https://www.baeldung.com/java-base64-encode-and-decode
                 // Print Base64 String of File
                 StringBuilder stringBuilder = new StringBuilder();
@@ -240,7 +250,6 @@ public class Training {
                     }
                 }
                 String encodedString = Base64.getEncoder().encodeToString(stringBuilder.toString().getBytes());
-                /*
                 System.out.println("---- BASE64 ENCODED MODEL START ----");
                 System.out.println(encodedString);
                 System.out.println("---- BASE64 ENCODED MODEL START ----");
@@ -277,41 +286,43 @@ public class Training {
                 }
                 // Build Confusion Matrix
             }
-            logger.info("Report for " + metricsFilter);
-            logger.info("--------------------------------------------------------------");
-            logger.info("Total Count Validation Errors: " + countTotalValidationErrors);
-            logger.info("Total Count Correct Validation: " + countCorrectValidations);
-            System.out.println();
-            System.out.println("Confusion Matrix");
-            System.out.println("--------------------------------------------------------------");
-            System.out.println("y axis contains actual class (input), -> x axis contains predictions (output)");
-            // {"mysql","nginx","mongodb","postgresql","apache"};
-            // Using Short Array, max length is 6
-            String[] shortNames = new String[] {"mysql","nginx","mongo","psql","apache"};
+            boolean confusionMatrixFlag = false;
+            if(confusionMatrixFlag) {
+                logger.info("Report for " + metricsFilter);
+                logger.info("--------------------------------------------------------------");
+                logger.info("Total Count Validation Errors: " + countTotalValidationErrors);
+                logger.info("Total Count Correct Validation: " + countCorrectValidations);
+                System.out.println();
+                System.out.println("Confusion Matrix");
+                System.out.println("--------------------------------------------------------------");
+                System.out.println("y axis contains actual class (input), -> x axis contains predictions (output)");
+                // {"mysql","nginx","mongodb","postgresql","apache"};
+                // Using Short Array, max length is 6
+                String[] shortNames = new String[]{"mysql", "nginx", "mongo", "psql", "apache"};
 
-            for (int i = -1; i < 5; i++) {
-                for (int j = -1; j < 5; j++) {
-                    if(i == -1 && j == -1) {
-                        System.out.printf("%7s","");
-                        continue;
+                for (int i = -1; i < 5; i++) {
+                    for (int j = -1; j < 5; j++) {
+                        if (i == -1 && j == -1) {
+                            System.out.printf("%7s", "");
+                            continue;
+                        }
+                        if (i == -1) {
+                            System.out.printf("%7s", shortNames[j]);
+                            continue;
+                        }
+                        if (j == -1) {
+                            System.out.printf("%7s", shortNames[i]);
+                            continue;
+                        }
+                        if (i != -1 && j != -1) {
+                            System.out.printf("%7d", confMatrix[i][j]);
+                        }
                     }
-                    if(i == -1){
-                        System.out.printf("%7s", shortNames[j]);
-                        continue;
-                    }
-                    if(j == -1){
-                        System.out.printf("%7s", shortNames[i]);
-                        continue;
-                    }
-                    if(i != -1 && j != -1) {
-                        System.out.printf("%7d", confMatrix[i][j]);
-                    }
+                    System.out.println("");
                 }
-                System.out.println("");
+
+                performanceMeasurement(confMatrix);
             }
-
-            performanceMeasurement(confMatrix);
-
         }
     }
 
