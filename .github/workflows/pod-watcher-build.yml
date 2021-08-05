@@ -5,15 +5,15 @@ on:
   push:
     branches: [main]
     paths:
-    - watcher/**
+    - pod-watcher/**
   pull_request:
     branches: [main]
     paths:
-    - watcher/**
+    - pod-watcher/**
 
 defaults:
   run:
-    working-directory: ./watcher
+    working-directory: ./pod-watcher
 
 jobs:
   buildImage:
