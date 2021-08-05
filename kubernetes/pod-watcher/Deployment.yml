@@ -21,16 +21,16 @@ spec:
             - name: path.serialized.model
               value: "/mnt/weka_model"
             - name: influxdb.server.url
-              value: "http://94.130.56.11:8086" 
+              value: "http://116.203.124.188:8086" 
             - name: influxdb.username
-              value: "user_k3s_telegraf_ds" 
+              value: "pod_metrics" 
             - name: influxdb.password
-              value: "<mypassword>" 
+              value: "mypassword" 
             - name: influxdb.database
               value: "k3s_telegraf_ds" 
             - name: data.aggregator.decision.tree.classifier.list
-              value: "nginx,mysql"
-          image: ghcr.io/lukonjun/pod-watcher:1089572893
+              value: "mysql,nginx,apache,postgres,mongo"
+          image: ghcr.io/lukonjun/pod-watcher:1101275795
           name: pod-watcher-container
           volumeMounts:
           - name: config-volume
