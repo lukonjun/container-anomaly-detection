@@ -35,13 +35,13 @@ vi /etc/influxdb/influxdb.conf
 4. Install telegraf, an agent who collects data, and connects to influxdb. Follow the Steps described [here](https://github.com/lukonjun/container-anomaly-detection/tree/main/k3s/telegraf).
 
 5. Install the metrics-collector to your cluster and train a model (this Step is only necessary if you want to train your own model). Make sure to modify the Environment Variables to your needs in the Deployment.yml. 
-A detailed overview of the Application Properties can be found [here](https://github.com/lukonjun/container-anomaly-detection#metrics-collector)
+A detailed overview of the Application Properties can be found [here](https://github.com/lukonjun/container-anomaly-detection#metrics-collector).
 ```bash
 git clone https://github.com/lukonjun/container-anomaly-detection.git
 kubectl apply -f container-anomaly-detection/kubernetes/Namespace.yml
 kubectl apply -f container-anomaly-detection/kubernetes/metrics-collector/
 ```
-Pay special attention to the property `data.aggregator.decision.tree.classifier.list`. This list specifies the classifiers for the training and also determines which Pod Metrics are used in the Training Set for the training of the Model. For every Pod it gets checked if the PodName contains the Label.
+6. Pay special attention to the property `data.aggregator.decision.tree.classifier.list`. This list specifies the classifiers for the training and also determines which Pod Metrics are used in the Training Set and ultimately for the training of the Model. For every Pod it gets checked if the PodName contains the Label. To make schedule lots of pods easier i have written a shell script that can deploy several pods, this might help and can be found [here](https://github.com/lukonjun/container-anomaly-detection/tree/main/scripts). If you train a model, your pods need to have a Name that matches an entry in the classifier List ⚠️. 
 ```java
 private String containsLabel(V1.Pod pod, List<String> labels) {
     for (String label : labels) {
@@ -51,20 +51,19 @@ private String containsLabel(V1.Pod pod, List<String> labels) {
     }
     return null;
 }
-```
-So Pay special attention ⚠️
-that if you try to train a model, your pods have a Name that matched an entry in the classifier List `data.aggregator.decision.tree.classifier.list` and you edit the classifier List according to your needs. To make schedule lots of pods easier i have written a shell script that can deploy several pods, this might help and can be found [here](https://github.com/lukonjun/container-anomaly-detection/tree/main/scripts).  
-If the training succeds you will see In the console output a Path to the file of the serialized model. Complete the following steps to able to reuse the model for the pod watcher. 
+``` 
+7. If the training succeds you will see In the console output a Path to the file of the serialized model. Complete the following steps to able to reuse the model for the pod watcher. 
 ```bash
 kubectl logs metrics-collector-74ff6d4db4-8gtts | grep path
 kubectl exec -it metrics-collector-74ff6d4db4-8gtts /bin/sh
-base64 tmptmp_file (Copy in an Editor)
+base64 tmpSerialized_Model  | tr -d \\n (Copy in an Editor, dont copy the / at the end)
 ```
-6. Install the pod-watcher to your cluster and insert if you have trained a model your base64 decoded String into the ConfigMap.yml. If not you can you take the default yaml which includes a model trained for mysql and nginx.
+8. Install the pod-watcher to your cluster and **insert if you have trained a model your base64 decoded String into the ConfigMap.yml**. If not you can you take the default yaml which includes a default model trained for mysql,nginx,apache,postgres and mongo.   
+For every new spawning Pod a thread is started that trys to gather Data, the timeout of every Thread can be set via `timeout.fetching.metrics`. View again the Properties of the Container for special configuration and adapt in the Deployment.yml. Again make sure that the classifier List you specify `data.aggregator.decision.tree.classifier.list` match the Model you provide in the ConfigMap ⚠️. Otherwise this will lead to confusing false results.
 ```bash
 git clone https://github.com/lukonjun/container-anomaly-detection.git
 kubectl apply -f container-anomaly-detection/kubernetes/Namespace.yml
 kubectl apply -f container-anomaly-detection/kubernetes/pod-watcher/
 kubectl get pods | grep pod-watcher
+kubectl logs pod-watcher
 ```
-For every new spawning Pod a thread is started that trys to gather Data for, the timeout of every Thread can be set here. View again the Properties of the Container for special configuration and adapt in the Deployment.yml. Make sure that the classifier List you specify `data.aggregator.decision.tree.classifier.list` match the Model you provide in the ConfigMap ⚠️ otherwise this will lead to confusing false results.
