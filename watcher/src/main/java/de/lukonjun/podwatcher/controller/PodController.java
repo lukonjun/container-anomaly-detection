@@ -105,7 +105,7 @@ public class PodController {
                             // j48AnomalyDetector.fillDatasetWithFilter(instancesWithFilter, trainingSamples, null);
 
                             // Validate against Model
-                            boolean[] filterArray = new boolean[]{false, false, true, true, true, true, true, false, false, true, true, true, true, true, true};
+                            boolean[] filterArray = new boolean[]{true, true, true, true, true, true, true, true, true, true, true, true, true, true, true};
                             // Need to add Serialized Model here loadModel.getWekaModel()
                             String modelResult = null;
                             try {
