@@ -67,3 +67,15 @@ kubectl apply -f container-anomaly-detection/kubernetes/pod-watcher/
 kubectl get pods | grep pod-watcher
 kubectl logs pod-watcher
 ```
+9. Start a new Pod `kubectl run nginx1239841 --image=nginx` and watch the logs. If everything is set up correctly it should look like this.
+```
+kubectl logs pod-watcher-6c4694bc84-jhpk2 -f
+2021-08-06 09:24:42.962  INFO 1 --- [   scheduling-1] d.l.podwatcher.controller.PodController  : Start watching pods
+Recognized Pod nginx1239841
+Thread nginx1239841 running
+2021-08-06 09:24:47.938  INFO 1 --- [   scheduling-1] d.l.podwatcher.controller.PodController  : Start watching pods
+...
+2021-08-06 09:25:37.927  INFO 1 --- [   scheduling-1] d.l.podwatcher.controller.PodController  : Start watching pods
+nginx1239841 got classified by the model as nginx
+Thread nginx1239841 finished
+```
