@@ -30,7 +30,9 @@ spec:
               value: "k3s_telegraf_ds" 
             - name: data.aggregator.decision.tree.classifier.list
               value: "mysql,nginx,apache,postgres,mongo"
-          image: ghcr.io/lukonjun/pod-watcher:1101275795
+            - name: "pod.controller.watch.rate"
+              value: "100"
+          image: ghcr.io/lukonjun/pod-watcher:1185116182
           name: pod-watcher-container
           volumeMounts:
           - name: config-volume
