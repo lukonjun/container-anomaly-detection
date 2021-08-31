@@ -52,7 +52,7 @@ To unistall k3s you can either use
 ```bash
 /usr/local/bin/k3s-uninstall.sh (or as k3s-agent-uninstall.sh)
 ```
-### kubectl Hacks
+## kubectl Hacks
 One liner to run a debug container, busybox only includes no curl, only wget
 ```bash
 $ kubectl run -i --tty --rm debug --image=busybox --restart=Never -- sh  
@@ -77,6 +77,10 @@ if manual deletion is to exhausting
 ```bash
 $ for i in `kubectl get clusterrolebinding | awk '/46h/ {print $1}'`; do echo k delete clusterrolebindings $i; done
 ```
+this also works
+```bash
+$ kubectl get pods | awk '{print $1}' | xargs kubectl delete pod
+```
 create a clusterrolebinding with existing service account and clusterrole
 ```bash
 kubectl create clusterrolebinding pod-reader --clusterrole=pod-reader --serviceaccount=namespace:sa-name
@@ -90,7 +94,7 @@ pass kubeconfig file via command line
 ```bash
 kubectl --kubeconfig ./admin.conf get nodes
 ```
-### helm hacks
+## helm hacks
 see the yamls and all the values (at the top) that were actually deployed
 ```bash
 $ helm -n namespace get all release-name  
