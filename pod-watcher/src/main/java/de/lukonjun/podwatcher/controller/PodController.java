@@ -75,6 +75,7 @@ public class PodController {
                 Runnable runnable = new Runnable() {
                     @Override
                     public void run() {
+                        long threadStartRunningTime = System.currentTimeMillis();
                         String threadName = Thread.currentThread().getName();
                         System.out.println(threadName + " running");
 
@@ -117,6 +118,9 @@ public class PodController {
 
                             System.out.println(threadName + " finished");
                         }
+                        long totalThreadRunningTime = System.currentTimeMillis()-threadStartRunningTime;
+                        System.out.println("-- fetch time in milliseconds " + podName + " " + totalThreadRunningTime);
+
                     }
                 };
 
