@@ -55,7 +55,7 @@ public class PodController {
     DataAggregator dataAggregator;
 
     // Example from https://github.com/kubernetes-client/java/blob/master/examples/examples-release-12/src/main/java/io/kubernetes/client/examples/KubeConfigFileClientExample.java
-    @Scheduled(fixedRateString = "${pod.controller.scheduling.rate:5000}")
+    @Scheduled(fixedRateString = "${pod.controller.watch.rate:5000}")
     private void watchPodsSpawn() throws Exception {
 
         // Configuration Time Interval Metrics
