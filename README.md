@@ -13,6 +13,7 @@ The TU Berlin DOS research Group created over the last several years different A
 This Repository provides two Images, one for training ([metrics-collector](https://github.com/lukonjun/container-anomaly-detection/pkgs/container/metrics-collector)) and one for classifying new spawning containers ([pod-watcher](https://github.com/lukonjun/container-anomaly-detection/pkgs/container/metrics-collector)). The metrics-collector fetches Metrics from the Kubernetes API and the Influxdb to train a Model that can classify Containers. The pod-watcher loads this model and starts for every Container a Thread that waits till Metrics are received and then classifies the Container with the model. A detailed [documentation](https://github.com/lukonjun/container-anomaly-detection/blob/main/DOCUMENTATION.md) on how to set up the training container aswell as the pod-watcher can be found on the top level. 
 ### Metrics Collector
 Following Application Properties can be set for the metrics-collector. Please specify the Properties you want to overwrite via Environment Variables in the [Depyloment Manifest](https://github.com/lukonjun/container-anomaly-detection/blob/main/kubernetes/metrics-collector/Deployment.yml).
+
 Key | Value | Description
 ---- | ----- | ---------
 kubernetes.api.endpoint | https://kubernetes.default.svc | Specify differently if the API can not be reached via the default service
@@ -30,6 +31,7 @@ training.maxNumber | 200 |train with 1 - X Datasets, starting with 1,2,3 and so 
 
 ### Pod Watcher
 Following Application Properties can be set for the pod-watcher. Please specify the Properties you want to overwrite via Environment Variables in the [Depyloment Manifest](https://github.com/lukonjun/container-anomaly-detection/blob/main/kubernetes/pod-watcher/Deployment.yml).
+
 Key | Value | Description
 ---- | ----- | ---------
 kubernetes.api.endpoint | https://kubernetes.default.svc | Specify differently if the API can not be reached via the default service
@@ -43,6 +45,7 @@ timeout.fetching.metrics | 120000 | timeout for a thread to fetch metrics for a 
 path.serialized.model | /tmp/model | Path to the File in the Container where the serialized model is read 
 ### Used Metrics
 Most Metrics are polled by telegraf and then written into influxdb, some are also collected via the Kubernetes API. This table gives an overview of the explicit metrics we can use to train our ML Model. In the current metrics-collector Image all metrics are used, however if you inspect the source code you can set a filter to change this behaviour.
+
 Metric | Source | Example Value
 -------- | --------  | --------  
 pod_name   |  influx kubernetes_pod_container  | traefik-6f9cbd9bd4-rgh45
